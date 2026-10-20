@@ -192,6 +192,9 @@ function call(fn, args) {
   return callWeb(fn, args);
 }
 
+// Долгие операции: обновление оборотов идёт 1–2 минуты, отчёт за всё время — до минуты.
+const SLOW_CALLS = { runImport: 300000, reportData: 120000 };
+
 // Google иногда отвечает на POST лишним редиректом и вместо JSON приходит HTML.
 // Повторяем с тем же rid: сервер вернёт сохранённый результат и не выполнит действие дважды.
 async function callWeb(fn, args) {
@@ -201,7 +204,7 @@ async function callWeb(fn, args) {
     if (attempt) await new Promise(r => setTimeout(r, 400 * attempt));
     // Иногда Google не отдаёт ответ вовсе — без тайм-аута интерфейс ждал бы бесконечно.
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 30000);
+    const timer = setTimeout(() => ctrl.abort(), SLOW_CALLS[fn] || 20000);
     let text;
     try {
       const resp = await fetch(BOOT.apiUrl, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body, signal: ctrl.signal });
@@ -322,7 +325,9 @@ function bindFioFilter() {
 
 /* ---------- План ---------- */
 VIEWS.plan = async () => {
-  const d = await call('plan', { fio: S.fio });
+  const pre = S.prefetchPlan;
+  S.prefetchPlan = null;
+  const d = await (pre && !S.fio ? pre : call('plan', { fio: S.fio }));
   S.items = {};
   const sec = (title, list, red) => {
     list.forEach(i => { S.items[i.id] = i; });
@@ -926,6 +931,13 @@ function fatal(msg) {
 (async function init() {
   if (!TOKEN) return fatal('Откройте сервис по своей персональной ссылке. Ссылку выдаёт администратор.');
   try {
+    // «План» — экран по умолчанию: запрашиваем его вместе с правами, а не после них.
+    let startTab = 'plan';
+    try { startTab = localStorage.getItem('akt_tab') || 'plan'; } catch (e) { /* ignore */ }
+    if (startTab === 'plan') {
+      S.prefetchPlan = call('plan', { fio: '' });
+      S.prefetchPlan.catch(() => {});
+    }
     const d = await call('me');
     S.me = d.user;
     S.dicts = d.dicts;
@@ -936,10 +948,8 @@ function fatal(msg) {
     S.minComment = d.minComment;
     $('#who').innerHTML = `${esc(S.me.fio)}<small>${esc(S.me.role)}${S.me.type ? ' · ' + esc(S.me.type) : ''}</small>`;
     $('#foot').textContent = [d.data.psFile && 'Конкуренты: ' + d.data.psFile, d.data.sberFile && 'Сбер: ' + d.data.sberFile].filter(Boolean).join(' · ');
-    let tab = 'plan';
-    try { tab = localStorage.getItem('akt_tab') || 'plan'; } catch (e) { /* ignore */ }
     const allowed = TABS.filter(t => t[2](S.me)).map(t => t[0]);
-    go(allowed.indexOf(tab) >= 0 ? tab : 'plan');
+    go(allowed.indexOf(startTab) >= 0 ? startTab : 'plan');
   } catch (e) {
     fatal(e.message);
   }
