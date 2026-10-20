@@ -6,8 +6,18 @@
  */
 
 function doGet(e) {
+  var token = e && e.parameter ? str_(e.parameter.k).replace(/[^0-9a-f]/gi, '') : '';
+  // Интерфейс живёт на GitHub Pages: старые ссылки на Apps Script отправляем туда.
+  if (!/script\.google\.com/.test(appUrl_())) {
+    var target = token ? linkFor_(token) : appUrl_();
+    return HtmlService.createHtmlOutput(
+      '<div style="font:16px system-ui,sans-serif;max-width:480px;margin:15vh auto;text-align:center">' +
+      '<p>Сервис «Активности» открывается по новому адресу.</p>' +
+      '<p><a target="_top" href="' + target + '" style="display:inline-block;padding:10px 18px;background:#1a7f37;' +
+      'color:#fff;border-radius:9px;text-decoration:none">Перейти</a></p></div>'
+    ).setTitle('Активности').addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  }
   var t = HtmlService.createTemplateFromFile('Index');
-  var token = e && e.parameter ? str_(e.parameter.k) : '';
   t.bootJson = JSON.stringify({ mode: 'gas', token: token }).replace(/</g, '\\u003c');
   return t.evaluate()
     .setTitle('Активности')
@@ -57,8 +67,26 @@ function routes_() {
     saveDicts: { fn: saveDicts_, need: 'isAdmin' },
     adminInfo: { fn: adminInfo_, need: 'isAdmin' },
     runImport: { fn: function () { return importTurnovers(true); }, need: 'isAdmin' },
-    saveSettings: { fn: saveSettings_, need: 'isAdmin' }
+    saveSettings: { fn: saveSettings_, need: 'isAdmin' },
+    diagFns: { fn: diagFns_, need: 'isAdmin' }
   };
+}
+
+// Проверка доступности ФНС с серверов Google: коды ответов без кэша.
+function diagFns_(u, args) {
+  var inn = normInn_(args.inn || '3906321175');
+  var r1 = UrlFetchApp.fetch('https://egrul.nalog.ru/', { method: 'post', payload: { query: inn }, muteHttpExceptions: true });
+  var out = { step1: r1.getResponseCode(), body1: r1.getContentText().slice(0, 300) };
+  try {
+    var t = JSON.parse(r1.getContentText()).t;
+    Utilities.sleep(800);
+    var r2 = UrlFetchApp.fetch('https://egrul.nalog.ru/search-result/' + t, { muteHttpExceptions: true });
+    out.step2 = r2.getResponseCode();
+    out.body2 = r2.getContentText().slice(0, 300);
+  } catch (e) {
+    out.error = String(e);
+  }
+  return out;
 }
 
 function me_(u) {

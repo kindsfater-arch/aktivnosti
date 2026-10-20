@@ -67,7 +67,7 @@ function typeByFio_() {
 }
 
 function appUrl_() {
-  var url = prop_('APP_URL') || APP.WEB_APP_URL;
+  var url = prop_('APP_URL') || APP.PUBLIC_URL || APP.WEB_APP_URL;
   if (url) return url;
   try {
     return ScriptApp.getService().getUrl() || '';
