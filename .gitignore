@@ -1,0 +1,6 @@
+.clasprc.json
+node_modules/
+dist/
+.DS_Store
+*.xlsx
+*.csv

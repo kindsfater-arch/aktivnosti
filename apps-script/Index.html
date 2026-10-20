@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Активности</title>
+<style>
+:root {
+  --bg: #f4f6f5; --surface: #ffffff; --surface-2: #f8faf9; --text: #18221d; --muted: #63716a; --line: #dfe6e2;
+  --accent: #1a7f37; --accent-ink: #ffffff; --accent-soft: #e5f2e9;
+  --open: #1f5fbf; --open-soft: #e7effb; --lost: #8a3b32; --lost-soft: #f8e9e7; --warn: #9a5b00; --warn-soft: #fdf1dc;
+  --danger: #c5221f; --shadow: 0 1px 2px rgba(16, 24, 20, .06), 0 4px 16px rgba(16, 24, 20, .06);
+  --radius: 12px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1412; --surface: #171d1a; --surface-2: #1c2420; --text: #e6ece8; --muted: #9aa8a0; --line: #2a3430;
+    --accent: #3fb75e; --accent-ink: #08130c; --accent-soft: #183522;
+    --open: #7fb0ff; --open-soft: #172742; --lost: #f0a39a; --lost-soft: #3a1d1a; --warn: #f2c063; --warn-soft: #3a2c10;
+    --danger: #ff7b72; --shadow: 0 1px 2px rgba(0, 0, 0, .4);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1412; --surface: #171d1a; --surface-2: #1c2420; --text: #e6ece8; --muted: #9aa8a0; --line: #2a3430;
+  --accent: #3fb75e; --accent-ink: #08130c; --accent-soft: #183522;
+  --open: #7fb0ff; --open-soft: #172742; --lost: #f0a39a; --lost-soft: #3a1d1a; --warn: #f2c063; --warn-soft: #3a2c10;
+  --danger: #ff7b72; --shadow: 0 1px 2px rgba(0, 0, 0, .4);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--text); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+button, input, select, textarea { font: inherit; color: inherit; }
+.hidden { display: none !important; }
+.muted { color: var(--muted); }
+.num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+
+header.top { position: sticky; top: 0; z-index: 20; background: var(--surface); border-bottom: 1px solid var(--line); }
+.top-in { max-width: 1240px; margin: 0 auto; padding: 10px 16px 0; display: flex; align-items: center; gap: 12px; }
+.brand { font-weight: 700; font-size: 17px; letter-spacing: -.01em; display: flex; align-items: center; gap: 8px; }
+.brand i { width: 10px; height: 10px; border-radius: 3px; background: var(--accent); display: inline-block; }
+.who { margin-left: auto; text-align: right; font-size: 13px; line-height: 1.2; }
+.who small { color: var(--muted); display: block; }
+nav.tabs { max-width: 1240px; margin: 0 auto; padding: 0 12px; display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+nav.tabs::-webkit-scrollbar { display: none; }
+nav.tabs button { border: 0; background: none; padding: 10px 12px 11px; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; font-weight: 500; }
+nav.tabs button.on { color: var(--text); border-bottom-color: var(--accent); }
+main { max-width: 1240px; margin: 0 auto; padding: 16px; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.pad { padding: 14px 16px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin-bottom: 14px; }
+.toolbar .sp { flex: 1; }
+.toolbar label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+.btn { border: 1px solid var(--line); background: var(--surface); padding: 8px 14px; border-radius: 9px; cursor: pointer; font-weight: 500; white-space: nowrap; min-height: 38px; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.ghost { background: transparent; }
+.btn.danger { color: var(--danger); }
+.btn.sm { padding: 4px 10px; min-height: 30px; font-size: 13px; }
+.btn:disabled { opacity: .55; cursor: progress; }
+input, select, textarea { background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; min-height: 38px; width: 100%; }
+textarea { resize: vertical; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+.toolbar input, .toolbar select { width: auto; min-width: 140px; }
+.icon { border: 0; background: none; font-size: 18px; cursor: pointer; color: var(--muted); padding: 4px 8px; }
+
+.chip { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.k-open { background: var(--open-soft); color: var(--open); }
+.k-deal { background: var(--accent-soft); color: var(--accent); }
+.k-lost { background: var(--lost-soft); color: var(--lost); }
+.badge { display: inline-block; min-width: 22px; padding: 0 7px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); font-size: 12px; text-align: center; margin-left: 6px; }
+.badge.red { background: var(--lost-soft); color: var(--lost); border-color: transparent; }
+
+h2 { font-size: 19px; margin: 0; }
+h3 { font-size: 15px; margin: 22px 0 10px; display: flex; align-items: center; }
+h3:first-child { margin-top: 4px; }
+
+.items { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+.item { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.item .r1 { display: flex; justify-content: space-between; gap: 8px; align-items: start; }
+.item .name { font-weight: 600; }
+.item .meta { font-size: 13px; color: var(--muted); }
+.item .cm { font-size: 13px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.item .acts { display: flex; gap: 6px; margin-top: 2px; }
+.empty { color: var(--muted); padding: 10px 2px; font-size: 14px; }
+
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { font-size: 12px; color: var(--muted); font-weight: 600; background: var(--surface-2); position: sticky; top: 0; }
+tbody tr.click { cursor: pointer; }
+tbody tr.click:hover { background: var(--surface-2); }
+tr.total td { font-weight: 700; }
+td.cm { max-width: 340px; }
+@media (max-width: 760px) {
+  table.resp thead { display: none; }
+  table.resp tr { display: block; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  table.resp td { display: flex; justify-content: space-between; gap: 12px; border: 0; padding: 3px 0; text-align: right; }
+  table.resp td::before { content: attr(data-l); color: var(--muted); text-align: left; font-size: 13px; flex: none; }
+  table.resp td.cm { max-width: none; }
+  .toolbar input, .toolbar select { min-width: 0; width: 100%; }
+  .toolbar label { flex: 1 1 140px; }
+}
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.kpi { padding: 12px 14px; }
+.kpi b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.kpi span { font-size: 13px; color: var(--muted); }
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 3px; background: var(--surface-2); }
+.seg label { cursor: pointer; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; width: 0; min-height: 0; }
+.seg span { display: block; padding: 6px 12px; border-radius: 7px; font-size: 14px; color: var(--muted); }
+.seg input:checked + span { background: var(--surface); color: var(--text); box-shadow: var(--shadow); font-weight: 600; }
+.seg input:focus-visible + span { outline: 2px solid var(--accent); }
+.bar { height: 8px; border-radius: 4px; background: var(--accent); min-width: 2px; }
+
+.modal { position: fixed; inset: 0; z-index: 50; background: rgba(10, 16, 13, .45); display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 24px 12px; }
+.sheet { background: var(--surface); border-radius: 16px; width: 100%; max-width: 680px; box-shadow: 0 20px 60px rgba(0, 0, 0, .25); }
+.mhead { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px 8px; }
+.form { padding: 4px 18px 18px; display: flex; flex-direction: column; gap: 12px; }
+.fld { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.fld > span { color: var(--muted); font-weight: 500; }
+.fld small { color: var(--muted); font-size: 12px; }
+.static { padding: 8px 0; font-size: 15px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 560px) { .grid2 { grid-template-columns: 1fr; } .modal { padding: 0; } .sheet { border-radius: 0; min-height: 100%; } }
+.mfoot { display: flex; gap: 8px; align-items: center; padding-top: 6px; }
+.mfoot .sp { flex: 1; }
+.ferr { color: var(--danger); font-size: 14px; min-height: 0; }
+.inncard { border: 1px solid var(--line); background: var(--surface-2); border-radius: 10px; padding: 10px 12px; font-size: 13px; display: flex; flex-direction: column; gap: 8px; }
+.inncard .g { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.inncard b.big { font-size: 17px; display: block; font-variant-numeric: tabular-nums; }
+.note { border-radius: 8px; padding: 7px 10px; font-size: 13px; }
+.note.warn { background: var(--warn-soft); color: var(--warn); }
+.note.info { background: var(--open-soft); color: var(--open); }
+details summary { cursor: pointer; color: var(--muted); }
+.hist { margin: 6px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.hist li { border-left: 3px solid var(--line); padding-left: 8px; }
+
+#toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 80; background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: calc(100% - 32px); }
+#toast.on { opacity: 1; }
+#toast.err { background: var(--danger); color: #fff; }
+.loading { color: var(--muted); padding: 30px 4px; }
+.fatal { max-width: 520px; margin: 12vh auto; padding: 24px; text-align: center; }
+.foot { max-width: 1240px; margin: 0 auto; padding: 4px 16px 24px; font-size: 12px; color: var(--muted); }
+.chk { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+.chk input { width: auto; min-height: 0; }
+.checks { max-height: 180px; overflow-y: auto; border: 1px solid var(--line); border-radius: 9px; padding: 6px 10px; display: flex; flex-direction: column; gap: 4px; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.st-row { display: grid; grid-template-columns: 1fr 130px 34px; gap: 6px; margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div class="brand"><i></i>Активности</div>
+    <div class="who" id="who"></div>
+  </div>
+  <nav class="tabs" id="tabs"></nav>
+</header>
+<main id="view"><div class="loading">Загрузка…</div></main>
+<div class="foot" id="foot"></div>
+<div class="modal hidden" id="modal"><div class="sheet" id="sheet"></div></div>
+<div id="toast"></div>
+
+<script>
+const BOOT = /*BOOT*/<?!= bootJson ?>/*END*/;
+
+const TOKEN = (() => {
+  let t = BOOT.token || new URLSearchParams(location.search).get('k') || '';
+  try {
+    if (t) localStorage.setItem('akt_token', t);
+    else t = localStorage.getItem('akt_token') || '';
+  } catch (e) { /* хранилище недоступно — работаем по ссылке */ }
+  return t;
+})();
+
+function call(fn, args) {
+  args = args || {};
+  if (BOOT.mode === 'gas') {
+    return new Promise((resolve, reject) => {
+      google.script.run
+        .withSuccessHandler(r => (r && r.ok) ? resolve(r.data) : reject(new Error(r ? r.error : 'Пустой ответ сервера')))
+        .withFailureHandler(e => reject(e instanceof Error ? e : new Error(String(e))))
+        .api(TOKEN, fn, args);
+    });
+  }
+  return fetch(BOOT.apiUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ k: TOKEN, fn, args })
+  }).then(r => r.json()).then(r => {
+    if (!r.ok) throw new Error(r.error);
+    return r.data;
+  });
+}
+
+/* ---------- помощники ---------- */
+const $ = (s, el) => (el || document).querySelector(s);
+const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const money = n => (n === '' || n == null || isNaN(+n)) ? '' : Math.round(+n).toLocaleString('ru-RU');
+const rub = n => n ? money(n) + ' ₽' : '—';
+const pct = n => n ? Math.round(n * 100) + '%' : '0%';
+const ruD = s => s ? s.slice(8, 10) + '.' + s.slice(5, 7) + '.' + s.slice(0, 4) : '';
+const isoToday = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+const shiftDays = (iso, n) => { const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + n); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+const monthStart = iso => iso.slice(0, 8) + '01';
+const MONTHS = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+const monthName = key => key === 'none' ? 'Без даты следующего шага' : key === 'overdue' ? 'Просрочено' : MONTHS[+key.slice(5, 7) - 1] + ' ' + key.slice(0, 4);
+const opt = (v, sel, label) => `<option value="${esc(v)}"${v === sel ? ' selected' : ''}>${esc(label == null ? v : label)}</option>`;
+const kindOf = status => S.kinds[status] || 'open';
+const chip = status => status ? `<span class="chip k-${kindOf(status)}">${esc(status)}</span>` : '';
+
+function toast(msg, isErr) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.className = 'on' + (isErr ? ' err' : '');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => { t.className = ''; }, isErr ? 5000 : 2500);
+}
+
+function openModal(html) {
+  $('#sheet').innerHTML = html;
+  $('#modal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  $$('[data-close]', $('#sheet')).forEach(b => b.addEventListener('click', closeModal));
+}
+function closeModal() {
+  $('#modal').classList.add('hidden');
+  $('#sheet').innerHTML = '';
+  document.body.style.overflow = '';
+}
+$('#modal').addEventListener('mousedown', e => { if (e.target.id === 'modal') closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modal').classList.contains('hidden')) closeModal(); });
+
+function download(f) {
+  const bin = atob(f.b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const url = URL.createObjectURL(new Blob([bytes], { type: f.mime }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = f.name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
+}
+
+async function busy(btn, label, fn) {
+  const old = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = label;
+  try { return await fn(); }
+  catch (e) { toast(e.message, true); }
+  finally { btn.disabled = false; btn.textContent = old; }
+}
+
+function copyText(text, input) {
+  const done = () => toast('Ссылка скопирована');
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(done, () => fallback());
+  } else fallback();
+  function fallback() {
+    if (input) { input.select(); }
+    try { document.execCommand('copy'); done(); } catch (e) { toast('Скопируйте ссылку вручную', true); }
+  }
+}
+
+/* ---------- состояние и навигация ---------- */
+const S = { me: null, dicts: null, kinds: {}, fios: [], tab: 'plan', items: {}, fio: '' };
+const TABS = [
+  ['plan', 'План', () => true],
+  ['acts', 'Активности', () => true],
+  ['deals', 'Сделки', () => true],
+  ['leads', 'Лиды PS', () => true],
+  ['reports', 'Отчёты', me => me.canReport],
+  ['admin', 'Админ', me => me.isAdmin]
+];
+const VIEWS = {};
+
+function renderTabs() {
+  $('#tabs').innerHTML = TABS.filter(t => t[2](S.me))
+    .map(t => `<button data-tab="${t[0]}" class="${t[0] === S.tab ? 'on' : ''}">${t[1]}</button>`).join('');
+  $$('#tabs button').forEach(b => b.addEventListener('click', () => go(b.dataset.tab)));
+}
+
+function go(tab) {
+  S.tab = tab;
+  try { localStorage.setItem('akt_tab', tab); } catch (e) { /* ignore */ }
+  renderTabs();
+  $('#view').innerHTML = '<div class="loading">Загрузка…</div>';
+  return VIEWS[tab]().catch(e => { $('#view').innerHTML = `<div class="card pad">${esc(e.message)}</div>`; });
+}
+const refresh = () => go(S.tab);
+
+function fioFilter() {
+  if (S.fios.length < 2) return '';
+  return `<label>Сотрудник<select id="fioSel"><option value="">Все</option>${S.fios.map(f => opt(f, S.fio)).join('')}</select></label>`;
+}
+function bindFioFilter() {
+  const sel = $('#fioSel');
+  if (sel) sel.addEventListener('change', () => { S.fio = sel.value; refresh(); });
+}
+
+/* ---------- План ---------- */
+VIEWS.plan = async () => {
+  const d = await call('plan', { fio: S.fio });
+  S.items = {};
+  const sec = (title, list, red) => {
+    list.forEach(i => { S.items[i.id] = i; });
+    return `<h3>${title}<span class="badge${red && list.length ? ' red' : ''}">${list.length}</span></h3>` +
+      (list.length ? `<div class="items">${list.map(itemCard).join('')}</div>` : '<div class="empty">Нет</div>');
+  };
+  $('#view').innerHTML = `
+    <div class="toolbar">${fioFilter()}<span class="sp"></span>
+      <button class="btn primary" id="addBtn">+ Активность</button></div>
+    ${sec('Просрочено', d.overdue, true)}
+    ${sec('Сегодня', d.todayList)}
+    ${sec('До конца недели', d.week)}
+    ${sec('Следующая неделя', d.nextWeek)}
+    ${d.later.length ? sec('Позже', d.later) : ''}
+    ${d.noNext.length ? sec('В работе без следующего шага', d.noNext, true) : ''}`;
+  bindFioFilter();
+  $('#addBtn').addEventListener('click', () => openForm({}));
+  bindItemButtons();
+};
+
+function itemCard(i) {
+  const who = S.me.seeAll || S.fios.length > 1 ? ` · ${esc(i.fio)}` : '';
+  return `<div class="card item">
+    <div class="r1"><span class="name">${esc(i.short || 'ИНН ' + i.inn)}</span>${chip(i.status)}</div>
+    <div class="meta">ИНН ${esc(i.inn)}${who}${i.potential ? ' · потенциал ' + rub(i.potential) : ''}</div>
+    <div class="meta">${i.next ? 'След. шаг: <b>' + ruD(i.next) + '</b> · ' : ''}последняя: ${esc(i.type)} ${ruD(i.date)}</div>
+    <div class="cm">${esc(i.comment)}</div>
+    <div class="acts">
+      ${i.canEdit ? `<button class="btn sm primary" data-follow="${esc(i.id)}">Записать результат</button>` : ''}
+      <button class="btn sm" data-open="${esc(i.id)}">Открыть</button>
+    </div></div>`;
+}
+
+function bindItemButtons() {
+  $$('[data-follow]').forEach(b => b.addEventListener('click', () => followUp(S.items[b.dataset.follow])));
+  $$('[data-open]').forEach(b => b.addEventListener('click', () => openForm(S.items[b.dataset.open])));
+}
+
+function followUp(i) {
+  openForm({ fio: i.fio, inn: i.inn, short: i.short, full: i.full, channel: i.channel, status: i.status, potential: i.potential, potSrc: i.potSrc });
+}
+
+/* ---------- Активности ---------- */
+const ACT_F = { from: '', to: '', status: '', type: '', channel: '', q: '' };
+VIEWS.acts = async () => {
+  if (!ACT_F.from) { ACT_F.from = monthStart(shiftDays(monthStart(isoToday()), -1)); }
+  const d = S.dicts;
+  $('#view').innerHTML = `
+    <div class="card pad toolbar">
+      <label>С<input type="date" id="fFrom" value="${ACT_F.from}"></label>
+      <label>По<input type="date" id="fTo" value="${ACT_F.to}"></label>
+      ${fioFilter()}
+      <label>Статус<select id="fStatus"><option value="">Все</option>${d.statuses.map(s => opt(s.name, ACT_F.status)).join('')}</select></label>
+      <label>Вид<select id="fType"><option value="">Все</option>${d.types.map(t => opt(t, ACT_F.type)).join('')}</select></label>
+      <label>Канал<select id="fChannel"><option value="">Все</option>${d.channels.map(c => opt(c, ACT_F.channel)).join('')}</select></label>
+      <label>Поиск<input id="fQ" placeholder="ИНН, название, текст" value="${esc(ACT_F.q)}"></label>
+      <span class="sp"></span>
+      <button class="btn primary" id="addBtn">+ Активность</button>
+    </div>
+    <div id="actList" class="loading">Загрузка…</div>`;
+  bindFioFilter();
+  $('#addBtn').addEventListener('click', () => openForm({}));
+  const apply = () => {
+    ACT_F.from = $('#fFrom').value; ACT_F.to = $('#fTo').value; ACT_F.status = $('#fStatus').value;
+    ACT_F.type = $('#fType').value; ACT_F.channel = $('#fChannel').value; ACT_F.q = $('#fQ').value.trim();
+    loadActs();
+  };
+  ['#fFrom', '#fTo', '#fStatus', '#fType', '#fChannel'].forEach(s => $(s).addEventListener('change', apply));
+  let t;
+  $('#fQ').addEventListener('input', () => { clearTimeout(t); t = setTimeout(apply, 400); });
+  await loadActs();
+};
+
+async function loadActs() {
+  const box = $('#actList');
+  const d = await call('listActivities', Object.assign({ fio: S.fio }, ACT_F));
+  S.items = {};
+  d.rows.forEach(r => { S.items[r.id] = r; });
+  const showFio = S.fios.length > 1;
+  if (!d.rows.length) { box.className = 'card pad empty'; box.textContent = 'Активностей за период нет'; return; }
+  box.className = 'card tbl-wrap';
+  box.innerHTML = `<table class="resp"><thead><tr>
+      <th>Дата</th>${showFio ? '<th>Сотрудник</th>' : ''}<th>Клиент</th><th>Вид</th><th>Статус</th>
+      <th class="num">Потенциал</th><th class="num">Сделка</th><th>След.</th><th>Комментарий</th></tr></thead>
+    <tbody>${d.rows.map(r => `<tr class="click" data-id="${esc(r.id)}">
+      <td data-l="Дата">${ruD(r.date)}</td>
+      ${showFio ? `<td data-l="Сотрудник">${esc(r.fio)}</td>` : ''}
+      <td data-l="Клиент"><b>${esc(r.short || '—')}</b><br><span class="muted">${esc(r.inn)}</span></td>
+      <td data-l="Вид">${esc(r.type)}</td>
+      <td data-l="Статус">${chip(r.status)}</td>
+      <td data-l="Потенциал" class="num">${money(r.potential)}</td>
+      <td data-l="Сделка" class="num">${money(r.dealSum)}</td>
+      <td data-l="След.">${ruD(r.next)}</td>
+      <td data-l="Комментарий" class="cm">${esc(r.comment)}</td></tr>`).join('')}</tbody></table>
+    ${d.total > d.rows.length ? `<div class="pad muted">Показаны первые ${d.rows.length} из ${d.total}. Уточните фильтр.</div>` : ''}`;
+  $$('tr[data-id]', box).forEach(tr => tr.addEventListener('click', () => openForm(S.items[tr.dataset.id])));
+}
+
+/* ---------- Форма активности ---------- */
+function openForm(pre) {
+  const a = Object.assign({ date: isoToday(), fio: S.me.fio }, pre);
+  const isEdit = !!a.id;
+  const ro = isEdit && !a.canEdit;
+  const d = S.dicts;
+  const fioList = S.fios.indexOf(a.fio) >= 0 ? S.fios : [a.fio].concat(S.fios);
+  const fioField = S.me.seeAll && !ro
+    ? `<label class="fld"><span>Сотрудник *</span><select name="fio">${fioList.map(f => opt(f, a.fio)).join('')}</select></label>`
+    : `<div class="fld"><span>Сотрудник</span><div class="static">${esc(a.fio)}</div></div>`;
+  openModal(`
+    <div class="mhead"><h2>${ro ? 'Активность' : isEdit ? 'Изменить активность' : 'Новая активность'}</h2>
+      <button class="icon" data-close aria-label="Закрыть">✕</button></div>
+    <form class="form" id="actForm" novalidate>
+      ${fioField}
+      <div class="grid2">
+        <label class="fld"><span>ИНН *</span><input name="inn" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="10 или 12 цифр" value="${esc(a.inn || '')}"></label>
+        <label class="fld"><span>Дата активности *</span><input type="date" name="date" value="${esc(a.date || '')}"></label>
+      </div>
+      <div id="innCard" class="inncard hidden"></div>
+      <label class="fld"><span>Краткое название ЮЛ</span><input name="short" value="${esc(a.short || '')}" placeholder="заполнится по ИНН"></label>
+      <label class="fld"><span>Полное название ЮЛ</span><input name="full" value="${esc(a.full || '')}" placeholder="заполнится по ИНН"></label>
+      <div class="fld"><span>Вид активности *</span><div class="seg">${d.types.map(t =>
+        `<label><input type="radio" name="type" value="${esc(t)}"${t === a.type ? ' checked' : ''}><span>${esc(t)}</span></label>`).join('')}</div></div>
+      <div class="grid2">
+        <label class="fld"><span>Канал поступления *</span><select name="channel"><option value="">— выберите —</option>${d.channels.map(c => opt(c, a.channel)).join('')}</select></label>
+        <label class="fld"><span>Статус *</span><select name="status"><option value="">— выберите —</option>${d.statuses.map(s => opt(s.name, a.status)).join('')}</select></label>
+      </div>
+      <label class="fld hidden" id="dealFld"><span>Сумма сделки, ₽ *</span><input name="dealSum" inputmode="decimal" value="${esc(a.dealSum || '')}"></label>
+      <div class="grid2">
+        <label class="fld"><span>Потенциал оборота в мес, ₽</span><input name="potential" inputmode="decimal" value="${esc(a.potential || '')}"><small id="potHint">${a.potSrc === 'вручную' ? 'введён вручную' : ''}</small></label>
+        <label class="fld"><span>Дата следующей активности</span><input type="date" name="next" value="${esc(a.next || '')}"></label>
+      </div>
+      <label class="fld"><span>Комментарий — суть активности *</span>
+        <textarea name="comment" rows="4" placeholder="Что обсудили, о чём договорились, какой следующий шаг">${esc(a.comment || '')}</textarea>
+        <small id="cmCount"></small></label>
+      <div class="ferr" id="ferr"></div>
+      <div class="mfoot">
+        ${isEdit && !ro ? '<button type="button" class="btn ghost danger" id="delBtn">Удалить</button>' : ''}
+        ${isEdit && !ro ? '<button type="button" class="btn ghost" id="dupBtn">Новая по клиенту</button>' : ''}
+        <span class="sp"></span>
+        <button type="button" class="btn ghost" data-close>${ro ? 'Закрыть' : 'Отмена'}</button>
+        ${ro ? '' : '<button type="submit" class="btn primary" id="saveBtn">Сохранить</button>'}
+      </div>
+    </form>`);
+
+  const f = $('#actForm');
+  if (ro) $$('input, select, textarea', f).forEach(el => { el.disabled = true; });
+
+  const dealToggle = () => $('#dealFld').classList.toggle('hidden', kindOf(f.status.value) !== 'deal');
+  f.status.addEventListener('change', dealToggle);
+  dealToggle();
+
+  const cm = () => {
+    const n = f.comment.value.trim().length;
+    $('#cmCount').textContent = n < S.minComment ? `минимум ${S.minComment} символов, сейчас ${n}` : '';
+  };
+  f.comment.addEventListener('input', cm);
+  cm();
+
+  let lastInn = '';
+  let autoNames = !a.short && !a.full;
+  let autoPot = !a.potential || a.potSrc !== 'вручную';
+  f.short.addEventListener('input', () => { autoNames = false; });
+  f.potential.addEventListener('input', () => { autoPot = false; $('#potHint').textContent = 'введён вручную'; });
+
+  const lookup = async inn => {
+    const card = $('#innCard');
+    card.classList.remove('hidden');
+    card.innerHTML = '<span class="muted">Ищем по ИНН…</span>';
+    try {
+      const r = await call('lookupInn', { inn });
+      if (f.inn.value !== inn) return;
+      if (r.company && autoNames && !ro) {
+        f.short.value = r.company.short || '';
+        f.full.value = r.company.full || '';
+      }
+      if (r.potential != null && autoPot && !ro) {
+        f.potential.value = r.potential;
+        $('#potHint').textContent = 'по данным PS (оборот у конкурентов)';
+      }
+      card.innerHTML = innCard(r, f.fio ? f.fio.value : a.fio);
+    } catch (e) {
+      card.innerHTML = `<div class="note warn">${esc(e.message)}</div>`;
+    }
+  };
+  const onInn = () => {
+    const v = f.inn.value.replace(/\D/g, '');
+    if (v !== f.inn.value) f.inn.value = v;
+    if ((v.length === 10 || v.length === 12) && v !== lastInn) { lastInn = v; lookup(v); }
+  };
+  f.inn.addEventListener('input', onInn);
+  if (a.inn) onInn();
+
+  const dup = $('#dupBtn');
+  if (dup) dup.addEventListener('click', () => followUp(a));
+
+  const del = $('#delBtn');
+  if (del) del.addEventListener('click', () => {
+    if (!del.dataset.sure) { del.dataset.sure = '1'; del.textContent = 'Точно удалить?'; return; }
+    busy(del, 'Удаляем…', async () => {
+      await call('deleteActivity', { id: a.id });
+      closeModal(); toast('Активность удалена'); refresh();
+    });
+  });
+
+  f.addEventListener('submit', e => {
+    e.preventDefault();
+    const v = {
+      id: a.id || '', fio: f.fio ? f.fio.value : a.fio, inn: f.inn.value.trim(), date: f.date.value,
+      short: f.short.value.trim(), full: f.full.value.trim(), channel: f.channel.value, status: f.status.value,
+      type: (f.querySelector('input[name=type]:checked') || {}).value || '', next: f.next.value,
+      comment: f.comment.value.trim(), dealSum: f.dealSum.value.trim(), potential: f.potential.value.trim()
+    };
+    const err = !/^(\d{10}|\d{12})$/.test(v.inn) ? 'ИНН должен содержать 10 или 12 цифр'
+      : !v.date ? 'Укажите дату активности'
+      : !v.type ? 'Выберите вид активности'
+      : !v.channel ? 'Выберите канал поступления'
+      : !v.status ? 'Выберите статус'
+      : kindOf(v.status) === 'deal' && !(parseFloat(v.dealSum.replace(/\s/g, '').replace(',', '.')) > 0) ? `Для статуса «${v.status}» укажите сумму сделки`
+      : v.next && v.next < v.date ? 'Дата следующей активности раньше даты активности'
+      : v.comment.length < S.minComment ? 'Опишите в комментарии суть активности' : '';
+    $('#ferr').textContent = err;
+    if (err) return;
+    busy($('#saveBtn'), 'Сохраняем…', async () => {
+      try {
+        await call('saveActivity', v);
+        closeModal(); toast('Сохранено'); refresh();
+      } catch (ex) { $('#ferr').textContent = ex.message; }
+    });
+  });
+}
+
+function innCard(r, fio) {
+  const c = r.company;
+  const others = r.inWork.filter(w => w.fio !== fio);
+  return `
+    <div><b>${esc(c ? c.short : 'Название не найдено')}</b>
+      ${c && c.status ? `<span class="muted"> · ${esc(c.status)}</span>` : ''}
+      ${c && c.region ? `<span class="muted"> · ${esc(c.region)}</span>` : ''}</div>
+    <div class="g">
+      <div><span class="muted">Оборот у конкурентов, мес</span>
+        <b class="big">${r.ps ? rub(r.ps.turnover) : 'нет в PS'}</b>
+        ${r.ps ? `<span class="muted">${esc(r.ps.banks)}<br>СБП ${pct(r.ps.sbp)} · e-com ${pct(r.ps.ecom)}</span>` : ''}</div>
+      <div><span class="muted">Оборот в Сбере, мес</span>
+        <b class="big">${r.sber ? rub(r.sber.turnover) : 'нет'}</b>
+        ${r.sber ? `<span class="muted">${esc(r.sber.file)}</span>` : ''}</div>
+    </div>
+    ${others.length ? `<div class="note warn">Клиент уже в работе: ${others.map(w => `${esc(w.fio)} — ${esc(w.status)} (${ruD(w.date)})`).join('; ')}</div>` : ''}
+    ${r.history.length ? `<details><summary>История по клиенту (${r.history.length})</summary><ul class="hist">${r.history.map(h =>
+      `<li><b>${ruD(h.date)}</b> · ${esc(h.type)} · ${esc(h.status)}${S.fios.length > 1 ? ' · ' + esc(h.fio) : ''}<br>${esc(h.comment)}</li>`).join('')}</ul></details>` : ''}`;
+}
+
+/* ---------- Сделки ---------- */
+VIEWS.deals = async () => {
+  const d = await call('deals', { fio: S.fio });
+  S.items = {};
+  const totalPot = d.pipeline.reduce((s, g) => s + g.potential, 0);
+  const totalCnt = d.pipeline.reduce((s, g) => s + g.count, 0);
+  const maxPot = Math.max(1, ...d.pipeline.map(g => g.potential));
+  d.pipeline.forEach(g => g.items.forEach(i => { S.items[i.id] = i; }));
+  d.deals.forEach(g => g.items.forEach(i => { S.items[i.id] = i; }));
+  $('#view').innerHTML = `
+    <div class="toolbar">${fioFilter()}<span class="sp"></span><button class="btn primary" id="addBtn">+ Активность</button></div>
+    <div class="kpis">
+      <div class="card kpi"><b>${money(totalCnt)}</b><span>клиентов в работе</span></div>
+      <div class="card kpi"><b>${rub(totalPot)}</b><span>потенциал воронки, мес</span></div>
+      <div class="card kpi"><b>${money(d.deals.reduce((s, g) => s + g.count, 0))}</b><span>сделок всего</span></div>
+      <div class="card kpi"><b>${rub(d.deals.reduce((s, g) => s + g.sum, 0))}</b><span>сумма сделок</span></div>
+    </div>
+    <h3>Планируемые сделки — по месяцу следующего шага</h3>
+    <div class="card tbl-wrap"><table class="resp"><thead><tr><th>Период</th><th class="num">Клиентов</th><th class="num">Потенциал, мес</th><th style="width:30%"></th></tr></thead>
+      <tbody>${d.pipeline.map((g, n) => `<tr class="click" data-pipe="${n}"><td data-l="Период"><b>${monthName(g.key)}</b></td>
+        <td data-l="Клиентов" class="num">${g.count}</td><td data-l="Потенциал" class="num">${money(g.potential)}</td>
+        <td data-l=""><div class="bar" style="width:${Math.round(g.potential / maxPot * 100)}%"></div></td></tr>
+        <tr class="hidden" id="pipe${n}"><td colspan="4"><div class="items">${g.items.map(itemCard).join('')}</div></td></tr>`).join('') ||
+        '<tr><td colspan="4" class="empty">Нет открытых клиентов</td></tr>'}</tbody></table></div>
+    <h3>Заключённые сделки — по месяцам</h3>
+    <div class="card tbl-wrap"><table class="resp"><thead><tr><th>Месяц</th><th class="num">Сделок</th><th class="num">Сумма, ₽</th><th>По статусам</th></tr></thead>
+      <tbody>${d.deals.map((g, n) => `<tr class="click" data-deal="${n}"><td data-l="Месяц"><b>${monthName(g.key)}</b></td>
+        <td data-l="Сделок" class="num">${g.count}</td><td data-l="Сумма" class="num">${money(g.sum)}</td>
+        <td data-l="Статусы">${Object.keys(g.byStatus).map(s => `${chip(s)} ${g.byStatus[s].count} · ${money(g.byStatus[s].sum)}`).join('<br>')}</td></tr>
+        <tr class="hidden" id="deal${n}"><td colspan="4"><div class="items">${g.items.map(itemCard).join('')}</div></td></tr>`).join('') ||
+        '<tr><td colspan="4" class="empty">Сделок пока нет</td></tr>'}</tbody></table></div>`;
+  bindFioFilter();
+  $('#addBtn').addEventListener('click', () => openForm({}));
+  $$('[data-pipe]').forEach(tr => tr.addEventListener('click', () => $('#pipe' + tr.dataset.pipe).classList.toggle('hidden')));
+  $$('[data-deal]').forEach(tr => tr.addEventListener('click', () => $('#deal' + tr.dataset.deal).classList.toggle('hidden')));
+  bindItemButtons();
+};
+
+/* ---------- Лиды PS ---------- */
+const LEAD_F = { min: '', onlyNew: false, q: '' };
+VIEWS.leads = async () => {
+  $('#view').innerHTML = `
+    <div class="card pad toolbar">
+      <label>Оборот у конкурентов от, ₽<input id="lMin" inputmode="numeric" value="${esc(LEAD_F.min)}" placeholder="например 500000"></label>
+      <label>Поиск<input id="lQ" value="${esc(LEAD_F.q)}" placeholder="ИНН, название, банк"></label>
+      <label class="chk" style="flex-direction:row;align-self:center"><input type="checkbox" id="lNew"${LEAD_F.onlyNew ? ' checked' : ''}> только не клиенты Сбера</label>
+      <span class="sp"></span><button class="btn" id="lGo">Показать</button>
+    </div>
+    <div id="leadList" class="loading">Загрузка…</div>`;
+  const apply = () => {
+    LEAD_F.min = $('#lMin').value.replace(/\D/g, ''); LEAD_F.q = $('#lQ').value.trim(); LEAD_F.onlyNew = $('#lNew').checked;
+    loadLeads();
+  };
+  $('#lGo').addEventListener('click', apply);
+  $('#lNew').addEventListener('change', apply);
+  $('#lQ').addEventListener('keydown', e => { if (e.key === 'Enter') apply(); });
+  await loadLeads();
+};
+
+async function loadLeads() {
+  const box = $('#leadList');
+  const d = await call('leads', { min: LEAD_F.min, onlyNew: LEAD_F.onlyNew, q: LEAD_F.q, limit: 200 });
+  if (!d.rows.length) { box.className = 'card pad empty'; box.textContent = 'Подходящих лидов нет. Проверьте, что обороты загружены (вкладка «Админ»).'; return; }
+  box.className = 'card tbl-wrap';
+  box.innerHTML = `<div class="pad muted">Клиенты с оборотом у конкурентов, по которым ещё никто не ведёт работу. Источник: ${esc(d.psFile || 'PS')}. Найдено: ${d.total}.</div>
+    <table class="resp"><thead><tr><th>ИНН</th><th>Название</th><th class="num">Оборот у конкурентов, мес</th><th>Банки</th>
+      <th class="num">СБП</th><th class="num">e-com</th><th class="num">Оборот в Сбере</th><th></th></tr></thead>
+    <tbody>${d.rows.map(r => `<tr>
+      <td data-l="ИНН">${esc(r.inn)}</td><td data-l="Название">${esc(r.name || '—')}</td>
+      <td data-l="Конкуренты" class="num"><b>${money(r.ps)}</b></td><td data-l="Банки" class="cm">${esc(r.banks)}</td>
+      <td data-l="СБП" class="num">${pct(r.sbp)}</td><td data-l="e-com" class="num">${pct(r.ecom)}</td>
+      <td data-l="Сбер" class="num">${money(r.sber) || '—'}</td>
+      <td data-l=""><button class="btn sm primary" data-take="${esc(r.inn)}" data-pot="${r.ps}">В работу</button></td></tr>`).join('')}</tbody></table>`;
+  $$('[data-take]', box).forEach(b => b.addEventListener('click', () => {
+    const channel = S.dicts.channels.indexOf('Пиратка') >= 0 ? 'Пиратка' : '';
+    openForm({ inn: b.dataset.take, channel, potential: +b.dataset.pot, status: S.dicts.statuses[0] ? S.dicts.statuses[0].name : '' });
+  }));
+}
+
+/* ---------- Отчёты ---------- */
+const REP = { period: 'week', date: isoToday(), from: '', to: '', group: 'fio', data: null };
+VIEWS.reports = async () => {
+  const per = [['day', 'День'], ['week', 'Неделя'], ['month', 'Месяц'], ['custom', 'Период']];
+  $('#view').innerHTML = `
+    <div class="card pad toolbar">
+      <div class="seg" id="perSeg">${per.map(p => `<label><input type="radio" name="per" value="${p[0]}"${p[0] === REP.period ? ' checked' : ''}><span>${p[1]}</span></label>`).join('')}</div>
+      <label id="rDateL">Дата в периоде<input type="date" id="rDate" value="${REP.date}"></label>
+      <label id="rFromL">С<input type="date" id="rFrom" value="${REP.from}"></label>
+      <label id="rToL">По<input type="date" id="rTo" value="${REP.to}"></label>
+      <button class="btn primary" id="rGo">Сформировать</button>
+      <span class="sp"></span>
+      <button class="btn" data-x="xlsx">Excel</button>
+      <button class="btn" data-x="pdf">PDF</button>
+      <button class="btn" data-x="pptx">PowerPoint</button>
+      ${S.me.canExportAll ? '<button class="btn" id="xAll" title="Все активности и клиенты одним файлом">Сводный файл</button>' : ''}
+    </div>
+    <div id="rOut"></div>`;
+  const sync = () => {
+    REP.period = $('input[name=per]:checked').value;
+    const custom = REP.period === 'custom';
+    $('#rDateL').classList.toggle('hidden', custom);
+    $('#rFromL').classList.toggle('hidden', !custom);
+    $('#rToL').classList.toggle('hidden', !custom);
+  };
+  $$('input[name=per]').forEach(r => r.addEventListener('change', () => { sync(); build(); }));
+  sync();
+  const args = () => {
+    REP.date = $('#rDate').value; REP.from = $('#rFrom').value; REP.to = $('#rTo').value;
+    return { period: REP.period, date: REP.date, from: REP.from, to: REP.to };
+  };
+  const build = () => busy($('#rGo'), 'Считаем…', async () => {
+    REP.data = await call('report', args());
+    renderReport();
+  });
+  $('#rGo').addEventListener('click', build);
+  $$('[data-x]').forEach(b => b.addEventListener('click', () => busy(b, 'Готовим файл…', async () => {
+    download(await call('exportReport', Object.assign(args(), { format: b.dataset.x })));
+  })));
+  const all = $('#xAll');
+  if (all) all.addEventListener('click', () => busy(all, 'Готовим файл…', async () => download(await call('exportAll'))));
+  if (REP.data) renderReport(); else await build();
+};
+
+function renderReport() {
+  const r = REP.data, s = r.summary;
+  const kpi = (v, l) => `<div class="card kpi"><b>${v}</b><span>${l}</span></div>`;
+  const head = ['Разрез', 'Активностей'].concat(r.types, ['Клиентов', 'Новых', 'Сделок', 'Сумма сделок', 'Отказы', 'Потенциал']);
+  const row = (x, label, cls) => `<tr class="${cls || ''}"><td data-l="Разрез">${esc(label)}</td><td data-l="Активностей" class="num">${x.acts}</td>
+    ${r.types.map(t => `<td data-l="${esc(t)}" class="num">${x.byType[t] || 0}</td>`).join('')}
+    <td data-l="Клиентов" class="num">${x.clients}</td><td data-l="Новых" class="num">${x.newClients}</td>
+    <td data-l="Сделок" class="num">${x.deals}</td><td data-l="Сумма сделок" class="num">${money(x.dealSum)}</td>
+    <td data-l="Отказы" class="num">${x.lost}</td><td data-l="Потенциал" class="num">${money(x.potential)}</td></tr>`;
+  const g = r.groupsMeta.find(m => m.key === REP.group) || r.groupsMeta[0];
+  const rows = r.groups[g.key];
+  $('#rOut').innerHTML = `
+    <h3>${esc(r.label)} <span class="muted" style="font-weight:400;margin-left:8px">сформирован ${esc(r.generatedAt)}</span></h3>
+    <div class="kpis">
+      ${kpi(money(s.acts), 'активностей · ' + r.types.map(t => t.toLowerCase() + ' ' + (s.byType[t] || 0)).join(', '))}
+      ${kpi(money(s.clients), 'клиентов в работе')}
+      ${kpi(money(s.newClients), 'новых клиентов')}
+      ${kpi(money(s.deals), 'сделок')}
+      ${kpi(rub(s.dealSum), 'сумма сделок')}
+      ${kpi(money(s.lost), 'отказы и блокировки')}
+      ${kpi(rub(s.potential), 'потенциал клиентов периода, мес')}
+      ${kpi(rub(r.pipeline.potential), 'потенциал открытой воронки · ' + r.pipeline.count + ' клиентов')}
+    </div>
+    <div class="toolbar"><div class="seg" id="grpSeg">${r.groupsMeta.map(m =>
+      `<label><input type="radio" name="grp" value="${m.key}"${m.key === g.key ? ' checked' : ''}><span>${esc(m.title)}</span></label>`).join('')}</div></div>
+    <div class="card tbl-wrap"><table class="resp"><thead><tr>${head.map((h, i) => `<th${i ? ' class="num"' : ''}>${esc(h)}</th>`).join('')}</tr></thead>
+      <tbody>${rows.map(x => row(x, g.key === 'day' ? ruD(x.key) : x.key)).join('') || `<tr><td colspan="${head.length}" class="empty">Нет активностей за период</td></tr>`}
+      ${rows.length ? row(s, 'Итого', 'total') : ''}</tbody></table></div>
+    <div class="cols" style="margin-top:14px">
+      <div class="card pad"><b>Без активностей за период</b><div class="muted" style="margin-top:6px">${r.idle.map(esc).join('<br>') || 'Все сотрудники отметились'}</div></div>
+      <div class="card pad"><b>Просроченные следующие шаги</b><div style="margin-top:6px">${r.overdue.map(o => `${esc(o.fio)} — <b>${o.count}</b>`).join('<br>') || '<span class="muted">Нет</span>'}</div></div>
+    </div>`;
+  $$('input[name=grp]').forEach(i => i.addEventListener('change', () => { REP.group = i.value; renderReport(); }));
+}
+
+/* ---------- Админ ---------- */
+VIEWS.admin = async () => {
+  const [users, info] = await Promise.all([call('users'), call('adminInfo')]);
+  S.users = users;
+  const d = S.dicts;
+  $('#view').innerHTML = `
+    <h3>Пользователи <span class="badge">${users.length}</span><span style="flex:1"></span><button class="btn primary sm" id="uAdd">+ Пользователь</button></h3>
+    <div class="card tbl-wrap"><table class="resp"><thead><tr><th>ФИО</th><th>Тип</th><th>ФИО НО</th><th>Роль</th><th>Отчёты</th><th>Доп. доступ</th><th>Активен</th><th>Ссылка</th></tr></thead>
+      <tbody>${users.map(u => `<tr class="click" data-uid="${esc(u.id)}">
+        <td data-l="ФИО"><b>${esc(u.fio)}</b></td><td data-l="Тип">${esc(u.type || '—')}</td><td data-l="НО">${esc(u.no || '—')}</td>
+        <td data-l="Роль">${esc(u.role)}</td><td data-l="Отчёты">${u.reports || u.role !== 'Сотрудник' ? 'да' : 'нет'}</td>
+        <td data-l="Доп. доступ">${esc(u.extra.join(', ') || '—')}</td><td data-l="Активен">${u.active ? 'да' : '<b>нет</b>'}</td>
+        <td data-l="Ссылка"><button class="btn sm" data-copy="${esc(u.link)}"${u.link ? '' : ' disabled title="Сначала разверните веб-приложение"'}>Скопировать</button></td></tr>`).join('')}</tbody></table></div>
+
+    <h3>Обороты и потенциал</h3>
+    <div class="card pad">
+      <div>${esc(info.import.msg)}</div>
+      <div class="muted" style="margin:4px 0 10px">${info.import.at ? 'Последний запуск: ' + new Date(info.import.at).toLocaleString('ru-RU') : ''} · автоматически каждый день в 6:00</div>
+      <button class="btn primary" id="impBtn">Обновить обороты сейчас</button>
+      <a class="btn ghost" href="${esc(info.sheetUrl)}" target="_blank" rel="noopener">Открыть таблицу</a>
+    </div>
+
+    <h3>Справочники</h3>
+    <div class="card pad">
+      <div class="cols">
+        <label class="fld"><span>Каналы поступления (по одному в строке)</span><textarea id="dCh" rows="6">${esc(d.channels.join('\n'))}</textarea></label>
+        <label class="fld"><span>Виды активности (по одному в строке)</span><textarea id="dTy" rows="6">${esc(d.types.join('\n'))}</textarea></label>
+        <div class="fld"><span>Статусы и их тип («Сделка» требует сумму)</span><div id="dSt">${d.statuses.map(stRow).join('')}</div>
+          <button class="btn sm" id="stAdd" type="button">+ статус</button></div>
+      </div>
+      <div style="margin-top:12px"><button class="btn primary" id="dSave">Сохранить справочники</button></div>
+    </div>
+
+    <h3>Настройки</h3>
+    <div class="card pad cols">
+      <label class="fld"><span>Адрес интерфейса для персональных ссылок</span>
+        <input id="sUrl" value="${esc(info.appUrl)}" placeholder="${esc(info.scriptUrl || 'https://…')}">
+        <small>Пусто — ссылки ведут на веб-приложение Apps Script${info.scriptUrl ? ' (' + esc(info.scriptUrl) + ')' : ''}. Для GitHub Pages укажите адрес страницы.</small></label>
+      <label class="fld"><span>Ключ DaData (необязательно)</span>
+        <input id="sDd" placeholder="${info.dadata ? 'ключ сохранён' : 'не задан — названия ищем в ФНС'}">
+        <small>Нужен, только если поиск в ФНС перестанет отвечать.</small></label>
+      <div><button class="btn" id="sSave">Сохранить настройки</button></div>
+    </div>`;
+
+  $$('[data-uid]').forEach(tr => tr.addEventListener('click', e => {
+    if (e.target.closest('[data-copy]')) return;
+    userForm(users.find(u => u.id === tr.dataset.uid));
+  }));
+  $$('[data-copy]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); copyText(b.dataset.copy); }));
+  $('#uAdd').addEventListener('click', () => userForm(null));
+  $('#impBtn').addEventListener('click', e => busy(e.target, 'Загружаем…', async () => {
+    toast(await call('runImport'));
+    refresh();
+  }));
+  $('#stAdd').addEventListener('click', () => $('#dSt').insertAdjacentHTML('beforeend', stRow({ name: '', kind: 'open' })));
+  $('#dSt').addEventListener('click', e => { if (e.target.dataset.rm != null) e.target.closest('.st-row').remove(); });
+  $('#dSave').addEventListener('click', e => busy(e.target, 'Сохраняем…', async () => {
+    const lines = id => $(id).value.split('\n').map(s => s.trim()).filter(Boolean);
+    const statuses = $$('.st-row', $('#dSt')).map(r => ({ name: $('input', r).value.trim(), kind: $('select', r).value })).filter(s => s.name);
+    S.dicts = await call('saveDicts', { channels: lines('#dCh'), types: lines('#dTy'), statuses });
+    S.kinds = Object.fromEntries(S.dicts.statuses.map(s => [s.name, s.kind]));
+    toast('Справочники сохранены');
+  }));
+  $('#sSave').addEventListener('click', e => busy(e.target, 'Сохраняем…', async () => {
+    const args = { appUrl: $('#sUrl').value.trim() };
+    if ($('#sDd').value.trim()) args.dadataKey = $('#sDd').value.trim();
+    await call('saveSettings', args);
+    toast('Настройки сохранены, ссылки обновлены');
+    refresh();
+  }));
+};
+
+function stRow(s) {
+  const kinds = [['open', 'Открыт'], ['deal', 'Сделка'], ['lost', 'Закрыт']];
+  return `<div class="st-row"><input value="${esc(s.name)}" placeholder="Название статуса">
+    <select>${kinds.map(k => opt(k[0], s.kind, k[1])).join('')}</select>
+    <button class="icon" type="button" data-rm title="Удалить">✕</button></div>`;
+}
+
+function userForm(u) {
+  const isNew = !u;
+  u = u || { fio: '', type: '', no: '', role: 'Сотрудник', reports: false, extra: [], active: true, link: '' };
+  const heads = S.users.filter(x => x.role !== 'Сотрудник').map(x => x.fio);
+  const others = S.users.map(x => x.fio).filter(f => f !== u.fio);
+  openModal(`
+    <div class="mhead"><h2>${isNew ? 'Новый пользователь' : 'Пользователь'}</h2><button class="icon" data-close aria-label="Закрыть">✕</button></div>
+    <form class="form" id="uForm" novalidate>
+      <label class="fld"><span>ФИО полностью *</span><input name="fio" value="${esc(u.fio)}" placeholder="Фамилия Имя Отчество"></label>
+      <div class="grid2">
+        <label class="fld"><span>Тип сотрудника</span><select name="type"><option value="">—</option>${S.empTypes.map(t => opt(t, u.type)).join('')}</select></label>
+        <label class="fld"><span>Роль</span><select name="role">${S.roles.map(r => opt(r, u.role)).join('')}</select></label>
+      </div>
+      <label class="fld"><span>ФИО начальника отдела</span><input name="no" list="noList" value="${esc(u.no)}">
+        <datalist id="noList">${heads.map(h => `<option value="${esc(h)}">`).join('')}</datalist></label>
+      <label class="chk"><input type="checkbox" name="reports"${u.reports ? ' checked' : ''}> Может формировать отчёты по всем данным</label>
+      <label class="chk"><input type="checkbox" name="active"${u.active ? ' checked' : ''}> Доступ включён</label>
+      <div class="fld"><span>Дополнительно видит активности сотрудников</span>
+        <div class="checks">${others.map(f => `<label class="chk"><input type="checkbox" name="extra" value="${esc(f)}"${u.extra.indexOf(f) >= 0 ? ' checked' : ''}> ${esc(f)}</label>`).join('') || '<span class="muted">Других пользователей нет</span>'}</div>
+        <small>Начальник отдела и администратор видят всё и без этого.</small></div>
+      ${u.link ? `<label class="fld"><span>Персональная ссылка</span><input id="uLink" readonly value="${esc(u.link)}"></label>` : ''}
+      <div class="ferr" id="uErr"></div>
+      <div class="mfoot">
+        ${!isNew ? '<button type="button" class="btn ghost danger" id="uRegen">Выдать новую ссылку</button>' : ''}
+        ${u.link ? '<button type="button" class="btn ghost" id="uCopy">Скопировать ссылку</button>' : ''}
+        <span class="sp"></span><button type="button" class="btn ghost" data-close>Отмена</button>
+        <button type="submit" class="btn primary" id="uSave">Сохранить</button>
+      </div>
+    </form>`);
+  const f = $('#uForm');
+  const copy = $('#uCopy');
+  if (copy) copy.addEventListener('click', () => copyText(u.link, $('#uLink')));
+  const regen = $('#uRegen');
+  if (regen) regen.addEventListener('click', () => {
+    if (!regen.dataset.sure) { regen.dataset.sure = '1'; regen.textContent = 'Старая ссылка перестанет работать. Точно?'; return; }
+    busy(regen, 'Выдаём…', async () => {
+      S.users = await call('regenToken', { id: u.id });
+      const fresh = S.users.find(x => x.id === u.id);
+      closeModal();
+      toast('Новая ссылка выдана');
+      await refresh();
+      userForm(fresh);
+    });
+  });
+  f.addEventListener('submit', e => {
+    e.preventDefault();
+    const v = {
+      id: u.id || '', fio: f.fio.value.trim(), type: f.type.value, role: f.role.value, no: f.no.value.trim(),
+      reports: f.reports.checked, active: f.active.checked,
+      extra: $$('input[name=extra]:checked', f).map(i => i.value)
+    };
+    if (v.fio.split(/\s+/).length < 2) { $('#uErr').textContent = 'Укажите ФИО полностью'; return; }
+    busy($('#uSave'), 'Сохраняем…', async () => {
+      try {
+        S.users = await call('saveUser', v);
+        closeModal(); toast('Пользователь сохранён');
+        await refresh();
+        const created = isNew && S.users.find(x => x.fio === v.fio);
+        if (created) userForm(created);
+      } catch (ex) { $('#uErr').textContent = ex.message; }
+    });
+  });
+}
+
+/* ---------- запуск ---------- */
+function fatal(msg) {
+  $('#tabs').innerHTML = '';
+  $('#view').innerHTML = `<div class="card fatal"><h2>Нет доступа</h2><p class="muted">${esc(msg)}</p></div>`;
+}
+
+(async function init() {
+  if (!TOKEN) return fatal('Откройте сервис по своей персональной ссылке. Ссылку выдаёт администратор.');
+  try {
+    const d = await call('me');
+    S.me = d.user;
+    S.dicts = d.dicts;
+    S.kinds = Object.fromEntries(d.dicts.statuses.map(s => [s.name, s.kind]));
+    S.fios = d.fios;
+    S.roles = d.roles;
+    S.empTypes = d.empTypes;
+    S.minComment = d.minComment;
+    $('#who').innerHTML = `${esc(S.me.fio)}<small>${esc(S.me.role)}${S.me.type ? ' · ' + esc(S.me.type) : ''}</small>`;
+    $('#foot').textContent = [d.data.psFile && 'Конкуренты: ' + d.data.psFile, d.data.sberFile && 'Сбер: ' + d.data.sberFile].filter(Boolean).join(' · ');
+    let tab = 'plan';
+    try { tab = localStorage.getItem('akt_tab') || 'plan'; } catch (e) { /* ignore */ }
+    const allowed = TABS.filter(t => t[2](S.me)).map(t => t[0]);
+    go(allowed.indexOf(tab) >= 0 ? tab : 'plan');
+  } catch (e) {
+    fatal(e.message);
+  }
+})();
+</script>
+</body>
+</html>
