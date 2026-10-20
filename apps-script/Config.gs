@@ -7,6 +7,8 @@ var APP = {
   SPREADSHEET_ID: '1_NVSx7JIXOe9bwoEjsOn93T1ZbQsrq2ijJi0QBVH9sY',
   DATA_FOLDER_ID: '1tXCRf_EUS8fI-Feonv6vWmfX2gbMBCog',
   ADMIN_FIO: 'Киндсфатер Владимир Владимирович',
+  // Адрес веб-приложения (clasp deploy). Свойство скрипта APP_URL или настройка в админке имеют приоритет.
+  WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbzyzTvd1_YNbMA7BnFK_pxpnBHJq6tP_6cceSkogJd8BnlgBLnO9OwBEBozrt9n9GjG/exec',
   TZ: 'Europe/Kaliningrad',
   MIN_COMMENT: 10,
   SHEET: {
