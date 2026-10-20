@@ -182,7 +182,7 @@ function validateActivity_(u, input) {
   v.short = str_(input.short);
   v.full = str_(input.full);
   if (!v.short || !v.full) {
-    var comp = findCompany_(v.inn);
+    var comp = companyFromCache_(v.inn);
     if (comp) {
       v.short = v.short || comp.short;
       v.full = v.full || comp.full;

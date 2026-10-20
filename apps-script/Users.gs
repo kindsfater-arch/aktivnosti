@@ -31,8 +31,7 @@ function usersCached_() {
 function decorate_(u) {
   u.isAdmin = u.role === ROLES.ADMIN;
   u.seeAll = u.isAdmin || u.role === ROLES.HEAD;
-  u.canReport = u.seeAll || u.reports;
-  u.canExportAll = u.seeAll;
+  u.canReport = u.isAdmin || u.reports;
   return u;
 }
 
@@ -51,7 +50,7 @@ function auth_(token) {
 function publicUser_(u) {
   return {
     id: u.id, fio: u.fio, type: u.type, no: u.no, role: u.role,
-    isAdmin: u.isAdmin, seeAll: u.seeAll, canReport: u.canReport, canExportAll: u.canExportAll
+    isAdmin: u.isAdmin, seeAll: u.seeAll, canReport: u.canReport
   };
 }
 

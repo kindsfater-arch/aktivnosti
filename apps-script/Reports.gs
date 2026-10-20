@@ -13,6 +13,7 @@ var REPORT_GROUPS = [
 ];
 
 function periodRange_(a) {
+  if (a.period === 'all') return { from: '0000-00-00', to: '9999-12-31', label: 'Всё время' };
   var d = toDate_(a.date) || today_();
   var from, to, label;
   if (a.period === 'day') {
@@ -112,8 +113,22 @@ function buildReport_(u, args) {
     if (a.next && a.next < ts) overdue[a.fio] = (overdue[a.fio] || 0) + 1;
   });
 
+  // Текущее состояние клиентов, по которым были активности за период.
+  var perClient = {};
+  list.forEach(function (a) { var k = a.fio + '|' + a.inn; perClient[k] = (perClient[k] || 0) + 1; });
+  var clients = latestByClient_(all).filter(function (a) { return perClient[a.fio + '|' + a.inn]; })
+    .sort(function (x, y) { return (y.potential || 0) - (x.potential || 0); })
+    .map(function (a) {
+      return {
+        fio: a.fio, no: a.no, inn: a.inn, short: a.short, channel: a.channel, status: a.status,
+        kind: KIND_LABEL[kinds[a.status]] || '', potential: a.potential, dealSum: a.dealSum,
+        date: a.date, next: a.next, count: perClient[a.fio + '|' + a.inn], comment: a.comment
+      };
+    });
+
   return {
     label: range.label,
+    clients: clients,
     from: range.from,
     to: range.to,
     generatedAt: Utilities.formatDate(new Date(), APP.TZ, 'dd.MM.yyyy HH:mm'),
@@ -135,8 +150,3 @@ function buildReport_(u, args) {
   };
 }
 
-function reportForClient_(u, args) {
-  var rep = buildReport_(u, args);
-  rep.details = rep.details.slice(0, 500);
-  return rep;
-}

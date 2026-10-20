@@ -1,15 +1,18 @@
 /**
  * Наименования организаций по ИНН.
- * Порядок поиска: кэш «Компании» → уже заполненные строки «Активностей» → ФНС (egrul.nalog.ru, без ключа)
- * → DaData (только если в свойствах скрипта задан DADATA_KEY). Найденное сохраняется в кэш,
- * повторно в интернет за тем же ИНН не ходим.
+ * Порядок поиска: кэш «Компании» → уже заполненные строки «Активностей» → DaData (если в настройках есть ключ).
+ * ФНС (egrul.nalog.ru) не используется: она недоступна с серверов Google, запрос просто зависает.
+ * Найденное сохраняется в кэш, повторно за тем же ИНН не ходим; ненайденное не ищем 6 часов.
  */
 
 function findCompany_(inn) {
-  return companyFromCache_(inn) ||
-    rememberCompany_(companyFromActivities_(inn)) ||
-    rememberCompany_(companyFromFns_(inn)) ||
-    rememberCompany_(companyFromDadata_(inn));
+  var c = companyFromCache_(inn) || rememberCompany_(companyFromActivities_(inn));
+  if (c) return c;
+  var cache = CacheService.getScriptCache();
+  if (cache.get('nf:' + inn)) return null;
+  c = rememberCompany_(companyFromDadata_(inn));
+  if (!c) cache.put('nf:' + inn, '1', 21600);
+  return c;
 }
 
 function companyFromCache_(inn) {
@@ -24,39 +27,6 @@ function companyFromCache_(inn) {
 function companyFromActivities_(inn) {
   var a = readActivities_().filter(function (x) { return x.inn === inn && (x.short || x.full); })[0];
   return a ? { inn: inn, short: a.short || a.full, full: a.full || a.short, source: 'активность' } : null;
-}
-
-function companyFromFns_(inn) {
-  try {
-    var opts = { muteHttpExceptions: true, followRedirects: true };
-    var r1 = UrlFetchApp.fetch('https://egrul.nalog.ru/', Object.assign({ method: 'post', payload: { query: inn } }, opts));
-    if (r1.getResponseCode() !== 200) return null;
-    var t = JSON.parse(r1.getContentText()).t;
-    if (!t) return null;
-    for (var attempt = 0; attempt < 4; attempt++) {
-      Utilities.sleep(600);
-      var r2 = UrlFetchApp.fetch('https://egrul.nalog.ru/search-result/' + t, opts);
-      if (r2.getResponseCode() !== 200) continue;
-      var j = JSON.parse(r2.getContentText());
-      if (j.status === 'wait') continue;
-      var rows = j.rows || [];
-      var row = rows.filter(function (x) { return x.i === inn; })[0] || rows[0];
-      if (!row) return null;
-      var isIp = row.k === 'fl';
-      return {
-        inn: inn,
-        short: isIp ? 'ИП ' + titleCase_(row.n) : (row.c || row.n),
-        full: isIp ? 'Индивидуальный предприниматель ' + titleCase_(row.n) : row.n,
-        ogrn: row.o || '',
-        region: row.rn || '',
-        status: row.e ? 'Прекращена ' + row.e : 'Действует',
-        source: 'ФНС'
-      };
-    }
-  } catch (e) {
-    console.warn('ФНС: ' + e);
-  }
-  return null;
 }
 
 function companyFromDadata_(inn) {
@@ -90,18 +60,15 @@ function companyFromDadata_(inn) {
   }
 }
 
+// Без блокировки: редкий дубль строки в кэше безвреден, а ожидание блокировки тормозило сохранение.
 function rememberCompany_(c) {
   if (!c || !(c.short || c.full)) return null;
   try {
-    withLock_(function () {
-      if (companyFromCache_(c.inn)) return;
-      var sh = sheet_(APP.SHEET.COMP), rowNum = sh.getLastRow() + 1;
-      ensureRows_(sh, rowNum);
-      sh.getRange(rowNum, 1).setNumberFormat('@');
-      sh.getRange(rowNum, 1, 1, COMP_HEADERS.length).setValues([[
-        c.inn, safeText_(c.short), safeText_(c.full), c.ogrn || '', c.region || '', c.status || '', c.source || '', new Date()
-      ]]);
-    });
+    if (companyFromCache_(c.inn)) return c;
+    sheet_(APP.SHEET.COMP).appendRow([
+      "'" + c.inn, safeText_(c.short), safeText_(c.full), c.ogrn || '', c.region || '', c.status || '', c.source || '', new Date()
+    ]);
+    CacheService.getScriptCache().remove('nf:' + c.inn);
   } catch (e) {
     console.warn('rememberCompany_: ' + e);
   }
@@ -115,8 +82,4 @@ function companiesMap_() {
     m[normInn_(r[0])] = str_(r[1]) || str_(r[2]);
   });
   return m;
-}
-
-function titleCase_(s) {
-  return str_(s).toLowerCase().replace(/(^|[\s-])([а-яёa-z])/g, function (m, p, ch) { return p + ch.toUpperCase(); });
 }

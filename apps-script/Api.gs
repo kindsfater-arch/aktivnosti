@@ -75,35 +75,15 @@ function routes_() {
     lookupInn: { fn: lookupInn_ },
     deals: { fn: getDeals_ },
     leads: { fn: getLeads_ },
-    report: { fn: reportForClient_, need: 'canReport' },
-    exportReport: { fn: exportReport_, need: 'canReport' },
-    exportAll: { fn: exportAll_, need: 'canExportAll' },
+    reportData: { fn: buildReport_, need: 'canReport' },
     users: { fn: function () { return listUsers_(); }, need: 'isAdmin' },
     saveUser: { fn: saveUser_, need: 'isAdmin' },
     regenToken: { fn: regenToken_, need: 'isAdmin' },
     saveDicts: { fn: saveDicts_, need: 'isAdmin' },
     adminInfo: { fn: adminInfo_, need: 'isAdmin' },
     runImport: { fn: function () { return importTurnovers(true); }, need: 'isAdmin' },
-    saveSettings: { fn: saveSettings_, need: 'isAdmin' },
-    diagFns: { fn: diagFns_, need: 'isAdmin' }
+    saveSettings: { fn: saveSettings_, need: 'isAdmin' }
   };
-}
-
-// Проверка доступности ФНС с серверов Google: коды ответов без кэша.
-function diagFns_(u, args) {
-  var inn = normInn_(args.inn || '3906321175');
-  var r1 = UrlFetchApp.fetch('https://egrul.nalog.ru/', { method: 'post', payload: { query: inn }, muteHttpExceptions: true });
-  var out = { step1: r1.getResponseCode(), body1: r1.getContentText().slice(0, 300) };
-  try {
-    var t = JSON.parse(r1.getContentText()).t;
-    Utilities.sleep(800);
-    var r2 = UrlFetchApp.fetch('https://egrul.nalog.ru/search-result/' + t, { muteHttpExceptions: true });
-    out.step2 = r2.getResponseCode();
-    out.body2 = r2.getContentText().slice(0, 300);
-  } catch (e) {
-    out.error = String(e);
-  }
-  return out;
 }
 
 function me_(u) {

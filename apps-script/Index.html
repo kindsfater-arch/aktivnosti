@@ -197,14 +197,19 @@ function call(fn, args) {
 async function callWeb(fn, args) {
   const rid = Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
   const body = JSON.stringify({ k: TOKEN, fn, args, rid });
-  for (let attempt = 0; attempt < 5; attempt++) {
-    if (attempt) await new Promise(r => setTimeout(r, 500 * attempt));
+  for (let attempt = 0; attempt < 4; attempt++) {
+    if (attempt) await new Promise(r => setTimeout(r, 400 * attempt));
+    // Иногда Google не отдаёт ответ вовсе — без тайм-аута интерфейс ждал бы бесконечно.
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 30000);
     let text;
     try {
-      const resp = await fetch(BOOT.apiUrl, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body });
+      const resp = await fetch(BOOT.apiUrl, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body, signal: ctrl.signal });
       text = await resp.text();
     } catch (e) {
       continue;
+    } finally {
+      clearTimeout(timer);
     }
     if (!/^\s*\{/.test(text)) continue;
     const r = JSON.parse(text);
@@ -253,19 +258,6 @@ function closeModal() {
 $('#modal').addEventListener('mousedown', e => { if (e.target.id === 'modal') closeModal(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modal').classList.contains('hidden')) closeModal(); });
 
-function download(f) {
-  const bin = atob(f.b64);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  const url = URL.createObjectURL(new Blob([bytes], { type: f.mime }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = f.name;
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
-}
-
 async function busy(btn, label, fn) {
   const old = btn.textContent;
   btn.disabled = true;
@@ -312,6 +304,12 @@ function go(tab) {
   return VIEWS[tab]().catch(e => { $('#view').innerHTML = `<div class="card pad">${esc(e.message)}</div>`; });
 }
 const refresh = () => go(S.tab);
+
+// Обновить текущий экран в фоне, не стирая то, что уже видно.
+function softRefresh() {
+  if (S.tab === 'acts' && $('#actList')) return loadActs().catch(() => {});
+  if (S.tab !== 'admin' && S.tab !== 'reports') return VIEWS[S.tab]().catch(() => {});
+}
 
 function fioFilter() {
   if (S.fios.length < 2) return '';
@@ -424,7 +422,7 @@ async function loadActs() {
 }
 
 /* ---------- Форма активности ---------- */
-function openForm(pre) {
+function openForm(pre, errMsg) {
   const a = Object.assign({ date: isoToday(), fio: S.me.fio }, pre);
   const isEdit = !!a.id;
   const ro = isEdit && !a.canEdit;
@@ -459,7 +457,7 @@ function openForm(pre) {
       <label class="fld"><span>Комментарий — суть активности *</span>
         <textarea name="comment" rows="4" placeholder="Что обсудили, о чём договорились, какой следующий шаг">${esc(a.comment || '')}</textarea>
         <small id="cmCount"></small></label>
-      <div class="ferr" id="ferr"></div>
+      <div class="ferr" id="ferr">${esc(errMsg || '')}</div>
       <div class="mfoot">
         ${isEdit && !ro ? '<button type="button" class="btn ghost danger" id="delBtn">Удалить</button>' : ''}
         ${isEdit && !ro ? '<button type="button" class="btn ghost" id="dupBtn">Новая по клиенту</button>' : ''}
@@ -523,10 +521,12 @@ function openForm(pre) {
   const del = $('#delBtn');
   if (del) del.addEventListener('click', () => {
     if (!del.dataset.sure) { del.dataset.sure = '1'; del.textContent = 'Точно удалить?'; return; }
-    busy(del, 'Удаляем…', async () => {
-      await call('deleteActivity', { id: a.id });
-      closeModal(); toast('Активность удалена'); refresh();
-    });
+    closeModal();
+    $$('[data-id]').filter(el => el.dataset.id === a.id).forEach(el => el.remove());
+    toast('Удаляем…');
+    call('deleteActivity', { id: a.id })
+      .then(() => { toast('Активность удалена'); softRefresh(); })
+      .catch(ex => { toast(ex.message, true); softRefresh(); });
   });
 
   f.addEventListener('submit', e => {
@@ -547,12 +547,16 @@ function openForm(pre) {
       : v.comment.length < S.minComment ? 'Опишите в комментарии суть активности' : '';
     $('#ferr').textContent = err;
     if (err) return;
-    busy($('#saveBtn'), 'Сохраняем…', async () => {
-      try {
-        await call('saveActivity', v);
-        closeModal(); toast('Сохранено'); refresh();
-      } catch (ex) { $('#ferr').textContent = ex.message; }
-    });
+    // Проверки уже пройдены в браузере: закрываем форму сразу, запись уходит в фоне.
+    // Если сервер всё же откажет, форма откроется снова с введёнными данными.
+    closeModal();
+    toast('Сохраняем…');
+    call('saveActivity', v)
+      .then(() => { toast('Сохранено'); softRefresh(); })
+      .catch(ex => {
+        toast(ex.message, true);
+        openForm(Object.assign({}, a, v, { canEdit: true }), ex.message);
+      });
   });
 }
 
@@ -655,83 +659,119 @@ async function loadLeads() {
   }));
 }
 
-/* ---------- Отчёты ---------- */
-const REP = { period: 'week', date: isoToday(), from: '', to: '', group: 'fio', data: null };
+/* ---------- Отчёты: выгрузка в Excel ---------- */
+const REP = { period: 'week', date: isoToday(), from: '', to: '' };
 VIEWS.reports = async () => {
-  const per = [['day', 'День'], ['week', 'Неделя'], ['month', 'Месяц'], ['custom', 'Период']];
+  loadXlsx().catch(() => {});
+  const per = [['day', 'День'], ['week', 'Неделя'], ['month', 'Месяц'], ['custom', 'Период'], ['all', 'Всё время']];
   $('#view').innerHTML = `
-    <div class="card pad toolbar">
-      <div class="seg" id="perSeg">${per.map(p => `<label><input type="radio" name="per" value="${p[0]}"${p[0] === REP.period ? ' checked' : ''}><span>${p[1]}</span></label>`).join('')}</div>
-      <label id="rDateL">Дата в периоде<input type="date" id="rDate" value="${REP.date}"></label>
-      <label id="rFromL">С<input type="date" id="rFrom" value="${REP.from}"></label>
-      <label id="rToL">По<input type="date" id="rTo" value="${REP.to}"></label>
-      <button class="btn primary" id="rGo">Сформировать</button>
-      <span class="sp"></span>
-      <button class="btn" data-x="xlsx">Excel</button>
-      <button class="btn" data-x="pdf">PDF</button>
-      <button class="btn" data-x="pptx">PowerPoint</button>
-      ${S.me.canExportAll ? '<button class="btn" id="xAll" title="Все активности и клиенты одним файлом">Сводный файл</button>' : ''}
-    </div>
-    <div id="rOut"></div>`;
+    <div class="card pad">
+      <div class="toolbar" style="margin-bottom:8px">
+        <div class="seg">${per.map(p => `<label><input type="radio" name="per" value="${p[0]}"${p[0] === REP.period ? ' checked' : ''}><span>${p[1]}</span></label>`).join('')}</div>
+        <label id="rDateL">Дата в периоде<input type="date" id="rDate" value="${REP.date}"></label>
+        <label id="rFromL">С<input type="date" id="rFrom" value="${REP.from}"></label>
+        <label id="rToL">По<input type="date" id="rTo" value="${REP.to}"></label>
+        <button class="btn primary" id="rGo">Выгрузить в Excel</button>
+      </div>
+      <div class="muted">В файле: сводка; разрезы по сотрудникам, начальникам отделов, типам сотрудников, каналам, статусам,
+        видам активности и дням; просроченные шаги; все активности за период и текущее состояние клиентов.</div>
+    </div>`;
   const sync = () => {
     REP.period = $('input[name=per]:checked').value;
-    const custom = REP.period === 'custom';
-    $('#rDateL').classList.toggle('hidden', custom);
-    $('#rFromL').classList.toggle('hidden', !custom);
-    $('#rToL').classList.toggle('hidden', !custom);
+    $('#rDateL').classList.toggle('hidden', REP.period === 'custom' || REP.period === 'all');
+    $('#rFromL').classList.toggle('hidden', REP.period !== 'custom');
+    $('#rToL').classList.toggle('hidden', REP.period !== 'custom');
   };
-  $$('input[name=per]').forEach(r => r.addEventListener('change', () => { sync(); build(); }));
+  $$('input[name=per]').forEach(r => r.addEventListener('change', sync));
   sync();
-  const args = () => {
+  $('#rGo').addEventListener('click', e => busy(e.target, 'Готовим файл…', async () => {
     REP.date = $('#rDate').value; REP.from = $('#rFrom').value; REP.to = $('#rTo').value;
-    return { period: REP.period, date: REP.date, from: REP.from, to: REP.to };
-  };
-  const build = () => busy($('#rGo'), 'Считаем…', async () => {
-    REP.data = await call('report', args());
-    renderReport();
-  });
-  $('#rGo').addEventListener('click', build);
-  $$('[data-x]').forEach(b => b.addEventListener('click', () => busy(b, 'Готовим файл…', async () => {
-    download(await call('exportReport', Object.assign(args(), { format: b.dataset.x })));
-  })));
-  const all = $('#xAll');
-  if (all) all.addEventListener('click', () => busy(all, 'Готовим файл…', async () => download(await call('exportAll'))));
-  if (REP.data) renderReport(); else await build();
+    if (REP.period === 'custom' && (!REP.from || !REP.to || REP.from > REP.to)) throw new Error('Укажите период: дату начала и окончания');
+    const [r] = await Promise.all([call('reportData', { period: REP.period, date: REP.date, from: REP.from, to: REP.to }), loadXlsx()]);
+    const name = 'Отчёт_' + (REP.period === 'all' ? 'всё_время_' + isoToday() : r.from + (r.from === r.to ? '' : '_' + r.to)) + '.xlsx';
+    XLSX.writeFile(reportWorkbook(r), name);
+    toast('Файл выгружен');
+  }));
 };
 
-function renderReport() {
-  const r = REP.data, s = r.summary;
-  const kpi = (v, l) => `<div class="card kpi"><b>${v}</b><span>${l}</span></div>`;
-  const head = ['Разрез', 'Активностей'].concat(r.types, ['Клиентов', 'Новых', 'Сделок', 'Сумма сделок', 'Отказы', 'Потенциал']);
-  const row = (x, label, cls) => `<tr class="${cls || ''}"><td data-l="Разрез">${esc(label)}</td><td data-l="Активностей" class="num">${x.acts}</td>
-    ${r.types.map(t => `<td data-l="${esc(t)}" class="num">${x.byType[t] || 0}</td>`).join('')}
-    <td data-l="Клиентов" class="num">${x.clients}</td><td data-l="Новых" class="num">${x.newClients}</td>
-    <td data-l="Сделок" class="num">${x.deals}</td><td data-l="Сумма сделок" class="num">${money(x.dealSum)}</td>
-    <td data-l="Отказы" class="num">${x.lost}</td><td data-l="Потенциал" class="num">${money(x.potential)}</td></tr>`;
-  const g = r.groupsMeta.find(m => m.key === REP.group) || r.groupsMeta[0];
-  const rows = r.groups[g.key];
-  $('#rOut').innerHTML = `
-    <h3>${esc(r.label)} <span class="muted" style="font-weight:400;margin-left:8px">сформирован ${esc(r.generatedAt)}</span></h3>
-    <div class="kpis">
-      ${kpi(money(s.acts), 'активностей · ' + r.types.map(t => t.toLowerCase() + ' ' + (s.byType[t] || 0)).join(', '))}
-      ${kpi(money(s.clients), 'клиентов в работе')}
-      ${kpi(money(s.newClients), 'новых клиентов')}
-      ${kpi(money(s.deals), 'сделок')}
-      ${kpi(rub(s.dealSum), 'сумма сделок')}
-      ${kpi(money(s.lost), 'отказы и блокировки')}
-      ${kpi(rub(s.potential), 'потенциал клиентов периода, мес')}
-      ${kpi(rub(r.pipeline.potential), 'потенциал открытой воронки · ' + r.pipeline.count + ' клиентов')}
-    </div>
-    <div class="toolbar"><div class="seg" id="grpSeg">${r.groupsMeta.map(m =>
-      `<label><input type="radio" name="grp" value="${m.key}"${m.key === g.key ? ' checked' : ''}><span>${esc(m.title)}</span></label>`).join('')}</div></div>
-    <div class="card tbl-wrap"><table class="resp"><thead><tr>${head.map((h, i) => `<th${i ? ' class="num"' : ''}>${esc(h)}</th>`).join('')}</tr></thead>
-      <tbody>${rows.map(x => row(x, g.key === 'day' ? ruD(x.key) : x.key)).join('') || `<tr><td colspan="${head.length}" class="empty">Нет активностей за период</td></tr>`}
-      ${rows.length ? row(s, 'Итого', 'total') : ''}</tbody></table></div>
-    <div class="cols" style="margin-top:14px">
-      <div class="card pad"><b>Без активностей за период</b><div class="muted" style="margin-top:6px">${r.idle.map(esc).join('<br>') || 'Все сотрудники отметились'}</div></div>
-      <div class="card pad"><b>Просроченные следующие шаги</b><div style="margin-top:6px">${r.overdue.map(o => `${esc(o.fio)} — <b>${o.count}</b>`).join('<br>') || '<span class="muted">Нет</span>'}</div></div>
-    </div>`;
-  $$('input[name=grp]').forEach(i => i.addEventListener('change', () => { REP.group = i.value; renderReport(); }));
+let xlsxLoading = null;
+function loadXlsx() {
+  if (window.XLSX) return Promise.resolve();
+  if (!xlsxLoading) {
+    xlsxLoading = new Promise((resolve, reject) => {
+      const el = document.createElement('script');
+      el.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      el.onload = resolve;
+      el.onerror = () => { xlsxLoading = null; reject(new Error('Не удалось загрузить модуль Excel, проверьте интернет')); };
+      document.head.appendChild(el);
+    });
+  }
+  return xlsxLoading;
+}
+
+// Дата yyyy-mm-dd → порядковый номер дня Excel (без сдвигов часовых поясов).
+const xlDate = iso => iso ? (Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10)) - Date.UTC(1899, 11, 30)) / 864e5 : '';
+
+function reportWorkbook(r) {
+  const X = XLSX.utils, wb = X.book_new();
+  const sheet = (name, rows, o) => {
+    const ws = X.aoa_to_sheet(rows);
+    const fmt = (cols, z) => (cols || []).forEach(c => {
+      for (let i = 1; i < rows.length; i++) {
+        const cell = ws[X.encode_cell({ r: i, c })];
+        if (cell && cell.t === 'n') cell.z = z;
+      }
+    });
+    fmt(o.money, '#,##0');
+    fmt(o.dates, 'dd.mm.yyyy');
+    ws['!cols'] = o.widths.map(w => ({ wch: w }));
+    if (o.filter && rows.length > 1) {
+      ws['!autofilter'] = { ref: X.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length - 1, c: rows[0].length - 1 } }) };
+    }
+    X.book_append_sheet(wb, ws, name.slice(0, 31));
+  };
+  const s = r.summary;
+  sheet('Сводка', [
+    ['Показатель', 'Значение'],
+    ['Отчёт', r.label],
+    ['Сформирован', r.generatedAt + ', ' + r.author],
+    ['Активностей', s.acts]
+  ].concat(r.types.map(t => ['   ' + t, s.byType[t] || 0]), [
+    ['Клиентов в работе за период', s.clients],
+    ['Новых клиентов', s.newClients],
+    ['Сделок (клиентов)', s.deals],
+    ['Сумма сделок, ₽', s.dealSum],
+    ['Отказы и блокировки', s.lost],
+    ['Потенциал клиентов за период, ₽/мес', s.potential],
+    ['Открытая воронка, клиентов', r.pipeline.count],
+    ['Потенциал открытой воронки, ₽/мес', r.pipeline.potential],
+    ['Следующие шаги в ближайшие 30 дней', r.pipeline.next30],
+    ['Сотрудники без активностей', r.idle.join(', ') || '—']
+  ]), { money: [1], widths: [40, 60] });
+
+  const head = ['Разрез', 'Активностей'].concat(r.types,
+    ['Клиентов', 'Новых клиентов', 'Сделок', 'Сумма сделок', 'Отказы и блокировки', 'Потенциал, мес']);
+  const groupRow = (x, label) => [label, x.acts].concat(r.types.map(t => x.byType[t] || 0),
+    [x.clients, x.newClients, x.deals, x.dealSum, x.lost, x.potential]);
+  r.groupsMeta.forEach(g => {
+    const rows = r.groups[g.key].map(x => groupRow(x, g.key === 'day' ? ruD(x.key) : x.key));
+    rows.push(groupRow(s, 'Итого'));
+    sheet(g.title, [head].concat(rows), { money: [head.length - 3, head.length - 1], widths: [34].concat(head.slice(1).map(() => 13)) });
+  });
+
+  sheet('Просроченные шаги', [['ФИО', 'Просроченных следующих активностей']].concat(r.overdue.map(o => [o.fio, o.count])),
+    { widths: [36, 22] });
+  sheet('Активности', [['Дата', 'ФИО', 'ФИО НО', 'Тип сотрудника', 'ИНН', 'Клиент', 'Канал', 'Вид', 'Статус',
+    'Потенциал, мес', 'Сумма сделки', 'След. активность', 'Комментарий']].concat(r.details.map(a => [
+    xlDate(a.date), a.fio, a.no, a.empType, a.inn, a.short, a.channel, a.type, a.status,
+    a.potential || '', a.dealSum || '', xlDate(a.next), a.comment])),
+    { dates: [0, 11], money: [9, 10], widths: [11, 30, 30, 10, 13, 30, 18, 11, 20, 14, 14, 12, 60], filter: true });
+  sheet('Клиенты', [['ФИО', 'ФИО НО', 'ИНН', 'Клиент', 'Канал', 'Текущий статус', 'Тип статуса', 'Потенциал, мес',
+    'Сумма сделки', 'Последняя активность', 'Следующая активность', 'Активностей за период', 'Последний комментарий']]
+    .concat(r.clients.map(c => [c.fio, c.no, c.inn, c.short, c.channel, c.status, c.kind, c.potential || '',
+      c.dealSum || '', xlDate(c.date), xlDate(c.next), c.count, c.comment])),
+    { money: [7, 8], dates: [9, 10], widths: [30, 30, 13, 30, 18, 20, 10, 14, 14, 12, 12, 10, 60], filter: true });
+  return wb;
 }
 
 /* ---------- Админ ---------- */
@@ -741,10 +781,10 @@ VIEWS.admin = async () => {
   const d = S.dicts;
   $('#view').innerHTML = `
     <h3>Пользователи <span class="badge">${users.length}</span><span style="flex:1"></span><button class="btn primary sm" id="uAdd">+ Пользователь</button></h3>
-    <div class="card tbl-wrap"><table class="resp"><thead><tr><th>ФИО</th><th>Тип</th><th>ФИО НО</th><th>Роль</th><th>Отчёты</th><th>Доп. доступ</th><th>Активен</th><th>Ссылка</th></tr></thead>
+    <div class="card tbl-wrap"><table class="resp"><thead><tr><th>ФИО</th><th>Тип</th><th>ФИО НО</th><th>Роль</th><th>Выгрузка отчётов</th><th>Доп. доступ</th><th>Активен</th><th>Ссылка</th></tr></thead>
       <tbody>${users.map(u => `<tr class="click" data-uid="${esc(u.id)}">
         <td data-l="ФИО"><b>${esc(u.fio)}</b></td><td data-l="Тип">${esc(u.type || '—')}</td><td data-l="НО">${esc(u.no || '—')}</td>
-        <td data-l="Роль">${esc(u.role)}</td><td data-l="Отчёты">${u.reports || u.role !== 'Сотрудник' ? 'да' : 'нет'}</td>
+        <td data-l="Роль">${esc(u.role)}</td><td data-l="Выгрузка отчётов">${u.reports || u.role === 'Администратор' ? 'да' : 'нет'}</td>
         <td data-l="Доп. доступ">${esc(u.extra.join(', ') || '—')}</td><td data-l="Активен">${u.active ? 'да' : '<b>нет</b>'}</td>
         <td data-l="Ссылка"><button class="btn sm" data-copy="${esc(u.link)}"${u.link ? '' : ' disabled title="Сначала разверните веб-приложение"'}>Скопировать</button></td></tr>`).join('')}</tbody></table></div>
 
@@ -828,7 +868,7 @@ function userForm(u) {
       </div>
       <label class="fld"><span>ФИО начальника отдела</span><input name="no" list="noList" value="${esc(u.no)}">
         <datalist id="noList">${heads.map(h => `<option value="${esc(h)}">`).join('')}</datalist></label>
-      <label class="chk"><input type="checkbox" name="reports"${u.reports ? ' checked' : ''}> Может формировать отчёты по всем данным</label>
+      <label class="chk"><input type="checkbox" name="reports"${u.reports ? ' checked' : ''}> Доступ к выгрузке отчётов в Excel (по всем данным)</label>
       <label class="chk"><input type="checkbox" name="active"${u.active ? ' checked' : ''}> Доступ включён</label>
       <div class="fld"><span>Дополнительно видит активности сотрудников</span>
         <div class="checks">${others.map(f => `<label class="chk"><input type="checkbox" name="extra" value="${esc(f)}"${u.extra.indexOf(f) >= 0 ? ' checked' : ''}> ${esc(f)}</label>`).join('') || '<span class="muted">Других пользователей нет</span>'}</div>
