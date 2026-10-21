@@ -152,6 +152,34 @@ details summary { cursor: pointer; color: var(--muted); }
 .checks { max-height: 180px; overflow-y: auto; border: 1px solid var(--line); border-radius: 9px; padding: 6px 10px; display: flex; flex-direction: column; gap: 4px; }
 .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
 .st-row { display: grid; grid-template-columns: 1fr 130px 34px; gap: 6px; margin-bottom: 6px; }
+
+/* Графики отчёта. Виды активности — категориальные слоты 1–3; результаты — сделка / открытые статусы / отказ. */
+:root {
+  --c-t1: #2a78d6; --c-t2: #eb6834; --c-t3: #1baf7a;
+  --c-deal: #0ca30c; --c-open1: #6250d6; --c-open2: #eda100; --c-lost: #d03b3b; --c-other: #8a8984;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --c-t1: #3987e5; --c-t2: #d95926; --c-t3: #199e70; --c-open1: #9085e9; --c-open2: #c98500; }
+}
+:root[data-theme="dark"] { --c-t1: #3987e5; --c-t2: #d95926; --c-t3: #199e70; --c-open1: #9085e9; --c-open2: #c98500; }
+.stack { display: flex; gap: 2px; height: 12px; min-width: 4px; }
+.stack i { display: block; min-width: 3px; height: 100%; }
+.stack i:first-child { border-radius: 4px 0 0 4px; }
+.stack i:last-child { border-radius: 0 4px 4px 0; }
+.stack i:only-child { border-radius: 4px; }
+.barcell { display: flex; align-items: center; gap: 8px; min-width: 150px; }
+.barcell .track { flex: 1; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); margin: 4px 2px 10px; }
+.legend b { color: var(--text); font-weight: 600; margin-right: 2px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.kpi small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+tr.detail > td { background: var(--surface-2); }
+.mini { width: auto; font-size: 13px; }
+.mini th, .mini td { padding: 5px 10px; }
+#tip { position: fixed; z-index: 90; pointer-events: none; background: var(--text); color: var(--bg); font-size: 13px; padding: 6px 9px; border-radius: 7px; white-space: pre-line; opacity: 0; transition: opacity .1s; }
+#tip.on { opacity: 1; }
+@media (max-width: 760px) { .barcell { min-width: 0; width: 60%; } }
 </style>
 </head>
 <body>
@@ -166,6 +194,7 @@ details summary { cursor: pointer; color: var(--muted); }
 <div class="foot" id="foot"></div>
 <div class="modal hidden" id="modal"><div class="sheet" id="sheet"></div></div>
 <div id="toast"></div>
+<div id="tip" role="tooltip"></div>
 
 <script>
 const BOOT = /*BOOT*/<?!= bootJson ?>/*END*/;
@@ -664,40 +693,210 @@ async function loadLeads() {
   }));
 }
 
-/* ---------- Отчёты: выгрузка в Excel ---------- */
-const REP = { period: 'week', date: isoToday(), from: '', to: '' };
+/* ---------- Отчёты: менеджеры на экране + выгрузка в Excel ---------- */
+const REP = { period: 'week', date: isoToday(), from: '', to: '', empType: '', data: null, key: '', seq: 0 };
+const repArgs = () => ({ period: REP.period, date: REP.date, from: REP.from, to: REP.to });
+
 VIEWS.reports = async () => {
   loadXlsx().catch(() => {});
   const per = [['day', 'День'], ['week', 'Неделя'], ['month', 'Месяц'], ['custom', 'Период'], ['all', 'Всё время']];
   $('#view').innerHTML = `
-    <div class="card pad">
-      <div class="toolbar" style="margin-bottom:8px">
-        <div class="seg">${per.map(p => `<label><input type="radio" name="per" value="${p[0]}"${p[0] === REP.period ? ' checked' : ''}><span>${p[1]}</span></label>`).join('')}</div>
-        <label id="rDateL">Дата в периоде<input type="date" id="rDate" value="${REP.date}"></label>
-        <label id="rFromL">С<input type="date" id="rFrom" value="${REP.from}"></label>
-        <label id="rToL">По<input type="date" id="rTo" value="${REP.to}"></label>
-        <button class="btn primary" id="rGo">Выгрузить в Excel</button>
-      </div>
-      <div class="muted">В файле: сводка; разрезы по сотрудникам, начальникам отделов, типам сотрудников, каналам, статусам,
-        видам активности и дням; просроченные шаги; все активности за период и текущее состояние клиентов.</div>
-    </div>`;
+    <div class="card pad toolbar">
+      <div class="seg">${per.map(p => `<label><input type="radio" name="per" value="${p[0]}"${p[0] === REP.period ? ' checked' : ''}><span>${p[1]}</span></label>`).join('')}</div>
+      <label id="rDateL">Дата в периоде<input type="date" id="rDate" value="${REP.date}"></label>
+      <label id="rFromL">С<input type="date" id="rFrom" value="${REP.from}"></label>
+      <label id="rToL">По<input type="date" id="rTo" value="${REP.to}"></label>
+      <span class="sp"></span>
+      <button class="btn" id="rXls" title="Сводка, все разрезы, активности и клиенты за выбранный период">Выгрузить в Excel</button>
+    </div>
+    <div id="rOut"><div class="loading">Считаем…</div></div>`;
   const sync = () => {
     REP.period = $('input[name=per]:checked').value;
     $('#rDateL').classList.toggle('hidden', REP.period === 'custom' || REP.period === 'all');
     $('#rFromL').classList.toggle('hidden', REP.period !== 'custom');
     $('#rToL').classList.toggle('hidden', REP.period !== 'custom');
   };
-  $$('input[name=per]').forEach(r => r.addEventListener('change', sync));
+  const readInputs = () => {
+    REP.date = $('#rDate').value || isoToday(); REP.from = $('#rFrom').value; REP.to = $('#rTo').value;
+    return !(REP.period === 'custom' && (!REP.from || !REP.to || REP.from > REP.to));
+  };
+  const getData = async () => {
+    const key = JSON.stringify(repArgs());
+    if (REP.data && REP.key === key) return REP.data;
+    const r = await call('reportData', repArgs());
+    REP.data = r; REP.key = key;
+    return r;
+  };
+  const load = async () => {
+    if (!readInputs()) { $('#rOut').innerHTML = '<div class="card pad muted">Укажите дату начала и окончания периода</div>'; return; }
+    const seq = ++REP.seq;
+    if (!(REP.data && REP.key === JSON.stringify(repArgs()))) $('#rOut').innerHTML = '<div class="loading">Считаем…</div>';
+    try {
+      await getData();
+      if (seq === REP.seq) renderManagers();
+    } catch (e) {
+      if (seq === REP.seq) $('#rOut').innerHTML = `<div class="card pad">${esc(e.message)}</div>`;
+    }
+  };
+  $$('input[name=per]').forEach(r => r.addEventListener('change', () => { sync(); load(); }));
+  ['#rDate', '#rFrom', '#rTo'].forEach(id => $(id).addEventListener('change', load));
   sync();
-  $('#rGo').addEventListener('click', e => busy(e.target, 'Готовим файл…', async () => {
-    REP.date = $('#rDate').value; REP.from = $('#rFrom').value; REP.to = $('#rTo').value;
-    if (REP.period === 'custom' && (!REP.from || !REP.to || REP.from > REP.to)) throw new Error('Укажите период: дату начала и окончания');
-    const [r] = await Promise.all([call('reportData', { period: REP.period, date: REP.date, from: REP.from, to: REP.to }), loadXlsx()]);
+  $('#rXls').addEventListener('click', e => busy(e.target, 'Готовим файл…', async () => {
+    if (!readInputs()) throw new Error('Укажите период: дату начала и окончания');
+    const [r] = await Promise.all([getData(), loadXlsx()]);
     const name = 'Отчёт_' + (REP.period === 'all' ? 'всё_время_' + isoToday() : r.from + (r.from === r.to ? '' : '_' + r.to)) + '.xlsx';
     XLSX.writeFile(reportWorkbook(r), name);
     toast('Файл выгружен');
   }));
+  await load();
 };
+
+const shortFio = f => {
+  const p = String(f || '').split(/\s+/).filter(Boolean);
+  return p.length < 2 ? f : p[0] + ' ' + p.slice(1, 3).map(x => x[0] + '.').join(' ');
+};
+const share = (a, b) => b ? Math.round(a / b * 100) + '%' : '—';
+
+// Сводка по менеджерам из активностей периода. Сделки — по уникальным ИНН, как в серверном отчёте.
+function managerStats(r) {
+  const kinds = S.kinds;
+  const types = S.dicts.types;
+  const typeColor = t => ['var(--c-t1)', 'var(--c-t2)', 'var(--c-t3)'][types.indexOf(t)] || 'var(--c-other)';
+  const openNames = S.dicts.statuses.filter(x => x.kind === 'open').map(x => x.name);
+  const segs = [{ key: 'deal', label: 'Сделка', color: 'var(--c-deal)' }]
+    .concat(openNames.map((n, i) => ({ key: 's:' + n, label: n, color: ['var(--c-open1)', 'var(--c-open2)'][i] || 'var(--c-other)' })))
+    .concat([{ key: 'lost', label: 'Отказ / блокировка', color: 'var(--c-lost)' }]);
+  const segKeys = new Set(segs.map(x => x.key));
+  const segOf = a => {
+    const k = kinds[a.status] === 'deal' ? 'deal' : kinds[a.status] === 'lost' ? 'lost' : 's:' + a.status;
+    return segKeys.has(k) ? k : 'other';
+  };
+  const missName = (S.dicts.statuses.find(x => /недозвон/i.test(x.name)) || {}).name || '';
+
+  const staffType = {};
+  (r.staff || []).forEach(u => { staffType[u.fio] = u.type; });
+  const overdue = {};
+  r.overdue.forEach(o => { overdue[o.fio] = o.count; });
+
+  const byFio = {};
+  const blank = fio => ({ fio, type: staffType[fio] || '', acts: 0, byType: {}, bySeg: {}, matrix: {}, missed: 0, inns: new Set(), deals: {}, overdue: overdue[fio] || 0 });
+  r.details.forEach(a => {
+    const m = byFio[a.fio] || (byFio[a.fio] = blank(a.fio));
+    const seg = segOf(a), t = types.indexOf(a.type) >= 0 ? a.type : 'Прочее';
+    m.acts++;
+    m.byType[t] = (m.byType[t] || 0) + 1;
+    m.bySeg[seg] = (m.bySeg[seg] || 0) + 1;
+    (m.matrix[t] || (m.matrix[t] = {}))[seg] = (m.matrix[t][seg] || 0) + 1;
+    if (missName && a.status === missName) m.missed++;
+    m.inns.add(a.inn);
+    if (seg === 'deal') {
+      const cur = m.deals[a.inn];
+      if (!cur || a.date >= cur.date) m.deals[a.inn] = a;
+    }
+  });
+  if (Object.values(byFio).some(m => m.bySeg.other)) segs.push({ key: 'other', label: 'Прочие статусы', color: 'var(--c-other)' });
+
+  const employees = (r.staff || []).filter(u => u.role === 'Сотрудник').map(u => u.fio);
+  employees.forEach(f => { if (!byFio[f]) byFio[f] = blank(f); });
+  let list = Object.values(byFio);
+  const empTypes = [...new Set(list.map(m => m.type).filter(Boolean))].sort();
+  if (REP.empType) list = list.filter(m => m.type === REP.empType);
+  list.forEach(m => {
+    m.dealList = Object.values(m.deals);
+    m.dealSum = m.dealList.reduce((x, a) => x + (a.dealSum || 0), 0);
+  });
+  list.sort((a, b) => b.acts - a.acts || a.fio.localeCompare(b.fio, 'ru'));
+  return { list, segs, types, typeColor, missName, empTypes };
+}
+
+function renderManagers() {
+  const r = REP.data;
+  const st = managerStats(r);
+  const active = st.list.filter(m => m.acts);
+  const idle = st.list.filter(m => !m.acts);
+  const tot = active.reduce((o, m) => {
+    o.acts += m.acts; o.missed += m.missed; o.deals += m.dealList.length; o.dealSum += m.dealSum;
+    o.lost += m.bySeg.lost || 0;
+    st.types.forEach(t => { o.byType[t] = (o.byType[t] || 0) + (m.byType[t] || 0); });
+    return o;
+  }, { acts: 0, missed: 0, deals: 0, dealSum: 0, lost: 0, byType: {} });
+  const maxActs = Math.max(1, ...active.map(m => m.acts));
+
+  const kpi = (v, l, sub) => `<div class="card kpi"><b>${v}</b><span>${l}</span>${sub ? `<small>${sub}</small>` : ''}</div>`;
+  const stack = (parts, total) => parts.filter(p => p.n).map(p =>
+    `<i style="flex:${p.n} 1 0;background:${p.color}" data-tip="${esc(p.label + ': ' + p.n + (total ? ' (' + share(p.n, total) + ')' : ''))}"></i>`).join('');
+  const typeParts = m => st.types.map(t => ({ n: m.byType[t] || 0, color: st.typeColor(t), label: t })).concat(
+    m.byType['Прочее'] ? [{ n: m.byType['Прочее'], color: 'var(--c-other)', label: 'Прочее' }] : []);
+  const segParts = m => st.segs.map(x => ({ n: m.bySeg[x.key] || 0, color: x.color, label: x.label }));
+
+  const typeFilter = st.empTypes.length > 1 ? `<div class="seg" id="empSeg">${[['', 'Все']].concat(st.empTypes.map(t => [t, t])).map(t =>
+    `<label><input type="radio" name="emp" value="${esc(t[0])}"${t[0] === REP.empType ? ' checked' : ''}><span>${esc(t[1])}</span></label>`).join('')}</div>` : '';
+
+  $('#rOut').innerHTML = `
+    <div class="kpis">
+      ${kpi(money(tot.acts), 'активностей', st.types.map(t => t.toLowerCase() + ' ' + (tot.byType[t] || 0)).join(' · '))}
+      ${st.missName ? kpi(share(tot.acts - tot.missed, tot.acts), 'контакт состоялся', `${st.missName.toLowerCase()}: ${tot.missed}`) : ''}
+      ${kpi(money(tot.deals), 'сделок', tot.dealSum ? 'на ' + rub(tot.dealSum) : '')}
+      ${kpi(money(tot.lost), 'отказов и блокировок', '')}
+      ${kpi(active.length + ' из ' + st.list.length, 'менеджеров работали', idle.length ? 'без активностей: ' + idle.length : 'все отметились')}
+    </div>
+    ${typeFilter ? `<div class="toolbar">${typeFilter}</div>` : ''}
+    <div class="legend">
+      <span><b>Активности:</b></span>${st.types.map(t => `<span><i style="background:${st.typeColor(t)}"></i>${esc(t)}</span>`).join('')}
+      <span style="margin-left:12px"><b>Результат:</b></span>${st.segs.map(x => `<span><i style="background:${x.color}"></i>${esc(x.label)}</span>`).join('')}
+    </div>
+    ${active.length ? `<div class="card tbl-wrap"><table class="resp"><thead><tr>
+        <th>Менеджер</th><th>Активности</th><th>Результаты</th>
+        ${st.missName ? '<th class="num">Контакт</th>' : ''}<th class="num">Сделки</th><th class="num">Просрочено шагов</th></tr></thead>
+      <tbody>${active.map((m, i) => `
+        <tr class="click" data-m="${i}">
+          <td data-l="Менеджер"><b>${esc(shortFio(m.fio))}</b>${m.type ? ` <span class="muted">${esc(m.type)}</span>` : ''}</td>
+          <td data-l="Активности"><div class="barcell"><div class="track"><div class="stack" style="width:${Math.max(4, m.acts / maxActs * 100)}%">${stack(typeParts(m), m.acts)}</div></div><span class="num">${m.acts}</span></div></td>
+          <td data-l="Результаты"><div class="barcell"><div class="track"><div class="stack">${stack(segParts(m), m.acts)}</div></div></div></td>
+          ${st.missName ? `<td data-l="Контакт" class="num">${share(m.acts - m.missed, m.acts)}</td>` : ''}
+          <td data-l="Сделки" class="num">${m.dealList.length ? `<b>${m.dealList.length}</b><br><span class="muted">${money(m.dealSum)} ₽</span>` : '—'}</td>
+          <td data-l="Просрочено" class="num">${m.overdue ? `<span class="badge red">${m.overdue}</span>` : '—'}</td>
+        </tr>
+        <tr class="detail hidden" id="md${i}"><td colspan="${st.missName ? 6 : 5}">${managerDetail(m, st)}</td></tr>`).join('')}
+      </tbody></table></div>
+      <div class="muted" style="font-size:12px;margin:6px 2px">Нажмите на строку, чтобы увидеть виды активности по результатам и список сделок. «Просрочено шагов» — на сегодня.</div>`
+    : '<div class="card pad empty">За выбранный период активностей нет</div>'}
+    ${idle.length ? `<details class="card pad" style="margin-top:12px"><summary>Без активностей за период: ${idle.length}</summary>
+      <div style="margin-top:8px">${idle.map(m => esc(shortFio(m.fio)) + (m.overdue ? ` <span class="badge red" title="просрочено шагов">${m.overdue}</span>` : '')).join(', ')}</div></details>` : ''}`;
+
+  $$('tr[data-m]', $('#rOut')).forEach(tr => tr.addEventListener('click', () => $('#md' + tr.dataset.m).classList.toggle('hidden')));
+  $$('input[name=emp]', $('#rOut')).forEach(x => x.addEventListener('change', () => { REP.empType = x.value; renderManagers(); }));
+}
+
+function managerDetail(m, st) {
+  const types = st.types.concat(m.byType['Прочее'] ? ['Прочее'] : []);
+  const segs = st.segs.filter(x => m.bySeg[x.key]);
+  const cell = (t, k) => ((m.matrix[t] || {})[k]) || '';
+  return `<div class="cols">
+    <div><b>Вид активности × результат</b>
+      <div class="tbl-wrap" style="margin-top:6px"><table class="mini"><thead><tr><th></th>${segs.map(x => `<th class="num">${esc(x.label)}</th>`).join('')}<th class="num">Всего</th></tr></thead>
+        <tbody>${types.filter(t => m.byType[t]).map(t => `<tr><td>${esc(t)}</td>${segs.map(x => `<td class="num">${cell(t, x.key)}</td>`).join('')}<td class="num"><b>${m.byType[t]}</b></td></tr>`).join('')}</tbody></table></div>
+      <div class="muted" style="margin-top:6px">Клиентов: ${m.inns.size}</div></div>
+    <div><b>Сделки</b>${m.dealList.length ? `<ul class="hist">${m.dealList.map(a =>
+      `<li><b>${esc(a.short || a.inn)}</b> · ${esc(a.status)} · ${money(a.dealSum)} ₽<br><span class="muted">${ruD(a.date)} · ${esc(a.type)}</span></li>`).join('')}</ul>` : '<div class="muted" style="margin-top:6px">Нет</div>'}</div>
+  </div>`;
+}
+
+// Подсказка к сегментам графиков (наведение мыши).
+(function tooltip() {
+  const tip = $('#tip');
+  document.addEventListener('mouseover', e => {
+    const t = e.target.closest && e.target.closest('[data-tip]');
+    if (!t) { tip.className = ''; return; }
+    tip.textContent = t.dataset.tip;
+    tip.className = 'on';
+  });
+  document.addEventListener('mousemove', e => {
+    if (!tip.className) return;
+    tip.style.left = Math.min(e.clientX + 12, window.innerWidth - tip.offsetWidth - 8) + 'px';
+    tip.style.top = (e.clientY + 16) + 'px';
+  });
+})();
 
 let xlsxLoading = null;
 function loadXlsx() {

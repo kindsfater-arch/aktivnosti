@@ -126,8 +126,13 @@ function buildReport_(u, args) {
       };
     });
 
+  // Состав команды: для строк «без активностей» и фильтра по типу сотрудника.
+  var staff = usersCached_().filter(function (x) { return x.active; })
+    .map(function (x) { return { fio: x.fio, type: x.type, role: x.role, no: x.no }; });
+
   return {
     label: range.label,
+    staff: staff,
     clients: clients,
     from: range.from,
     to: range.to,
