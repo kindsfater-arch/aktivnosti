@@ -156,7 +156,7 @@ details summary { cursor: pointer; color: var(--muted); }
 .chk input { width: auto; min-height: 0; }
 .checks { max-height: 180px; overflow-y: auto; border: 1px solid var(--line); border-radius: 9px; padding: 6px 10px; display: flex; flex-direction: column; gap: 4px; }
 .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
-.st-row { display: grid; grid-template-columns: 1fr 130px 34px; gap: 6px; margin-bottom: 6px; }
+.st-row { display: grid; grid-template-columns: 1fr 110px auto 34px; gap: 6px; margin-bottom: 6px; align-items: center; }
 
 /* Графики отчёта. Виды активности — категориальные слоты 1–3; результаты — сделка / открытые статусы / отказ. */
 :root {
@@ -271,6 +271,8 @@ const MONTHS = ['Январь', 'Февраль', 'Март', 'Апрель', '�
 const monthName = key => key === 'none' ? 'Без даты следующего шага' : key === 'overdue' ? 'Просрочено' : MONTHS[+key.slice(5, 7) - 1] + ' ' + key.slice(0, 4);
 const opt = (v, sel, label) => `<option value="${esc(v)}"${v === sel ? ' selected' : ''}>${esc(label == null ? v : label)}</option>`;
 const kindOf = status => S.kinds[status] || 'open';
+// Статусы для выбора. Снятый с выбора текущий статус старой записи остаётся в списке, чтобы его не пришлось менять.
+const pickStatuses = keep => S.dicts.statuses.filter(s => s.active !== false || s.name === keep);
 const chip = status => status ? `<span class="chip k-${kindOf(status)}">${esc(status)}</span>` : '';
 
 function toast(msg, isErr) {
@@ -486,7 +488,7 @@ function openForm(pre, errMsg) {
         `<label><input type="radio" name="type" value="${esc(t)}"${t === a.type ? ' checked' : ''}><span>${esc(t)}</span></label>`).join('')}</div></div>
       <div class="grid2">
         <label class="fld"><span>Канал поступления *</span><select name="channel"><option value="">— выберите —</option>${d.channels.map(c => opt(c, a.channel)).join('')}</select></label>
-        <label class="fld"><span>Статус *</span><select name="status"><option value="">— выберите —</option>${d.statuses.map(s => opt(s.name, a.status)).join('')}</select></label>
+        <label class="fld"><span>Статус *</span><select name="status"><option value="">— выберите —</option>${pickStatuses(a.id ? a.status : '').map(s => opt(s.name, a.status, s.active === false ? s.name + ' (больше не используется)' : s.name)).join('')}</select></label>
       </div>
       <label class="fld hidden" id="dealFld"><span>Сумма сделки, ₽ *</span><input name="dealSum" inputmode="decimal" value="${esc(a.dealSum || '')}"></label>
       <div class="grid2">
@@ -694,7 +696,7 @@ async function loadLeads() {
       <td data-l=""><button class="btn sm primary" data-take="${esc(r.inn)}" data-pot="${r.ps}">В работу</button></td></tr>`).join('')}</tbody></table>`;
   $$('[data-take]', box).forEach(b => b.addEventListener('click', () => {
     const channel = S.dicts.channels.indexOf('Пиратка') >= 0 ? 'Пиратка' : '';
-    openForm({ inn: b.dataset.take, channel, potential: +b.dataset.pot, status: S.dicts.statuses[0] ? S.dicts.statuses[0].name : '' });
+    openForm({ inn: b.dataset.take, channel, potential: +b.dataset.pot, status: (pickStatuses()[0] || {}).name || '' });
   }));
 }
 
@@ -1010,7 +1012,7 @@ VIEWS.admin = async () => {
       <div class="cols">
         <label class="fld"><span>Каналы поступления (по одному в строке)</span><textarea id="dCh" rows="6">${esc(d.channels.join('\n'))}</textarea></label>
         <label class="fld"><span>Виды активности (по одному в строке)</span><textarea id="dTy" rows="6">${esc(d.types.join('\n'))}</textarea></label>
-        <div class="fld"><span>Статусы и их тип («Сделка» требует сумму)</span><div id="dSt">${d.statuses.map(stRow).join('')}</div>
+        <div class="fld"><span>Статусы и их тип («Сделка» требует сумму). Без галочки статус остаётся в отчётах и старых записях, но выбрать его нельзя</span><div id="dSt">${d.statuses.map(stRow).join('')}</div>
           <button class="btn sm" id="stAdd" type="button">+ статус</button></div>
       </div>
       <div style="margin-top:12px"><button class="btn primary" id="dSave">Сохранить справочники</button></div>
@@ -1037,11 +1039,11 @@ VIEWS.admin = async () => {
     toast(await call('runImport'));
     refresh();
   }));
-  $('#stAdd').addEventListener('click', () => $('#dSt').insertAdjacentHTML('beforeend', stRow({ name: '', kind: 'open' })));
+  $('#stAdd').addEventListener('click', () => $('#dSt').insertAdjacentHTML('beforeend', stRow({ name: '', kind: 'open', active: true })));
   $('#dSt').addEventListener('click', e => { if (e.target.dataset.rm != null) e.target.closest('.st-row').remove(); });
   $('#dSave').addEventListener('click', e => busy(e.target, 'Сохраняем…', async () => {
     const lines = id => $(id).value.split('\n').map(s => s.trim()).filter(Boolean);
-    const statuses = $$('.st-row', $('#dSt')).map(r => ({ name: $('input', r).value.trim(), kind: $('select', r).value })).filter(s => s.name);
+    const statuses = $$('.st-row', $('#dSt')).map(r => ({ name: $('input', r).value.trim(), kind: $('select', r).value, active: $('[data-active]', r).checked })).filter(s => s.name);
     S.dicts = await call('saveDicts', { channels: lines('#dCh'), types: lines('#dTy'), statuses });
     S.kinds = Object.fromEntries(S.dicts.statuses.map(s => [s.name, s.kind]));
     toast('Справочники сохранены');
@@ -1059,6 +1061,7 @@ function stRow(s) {
   const kinds = [['open', 'Открыт'], ['deal', 'Сделка'], ['lost', 'Закрыт']];
   return `<div class="st-row"><input value="${esc(s.name)}" placeholder="Название статуса">
     <select>${kinds.map(k => opt(k[0], s.kind, k[1])).join('')}</select>
+    <label class="chk" title="Доступен для выбора"><input type="checkbox" data-active${s.active !== false ? ' checked' : ''}>доступен</label>
     <button class="icon" type="button" data-rm title="Удалить">✕</button></div>`;
 }
 

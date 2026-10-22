@@ -141,6 +141,7 @@ function validateActivity_(u, input) {
 
   v.status = str_(input.status);
   if (!kinds[v.status]) throw new Error('Выберите статус');
+  v.statusActive = activeStatuses_(d).some(function (s) { return s.name === v.status; });
 
   v.date = toDate_(input.date);
   if (!v.date) throw new Error('Укажите дату активности');
@@ -204,10 +205,13 @@ function saveActivity_(u, input) {
       var cur = rowToAct_(curRow, rowNum);
       if (yes_(curRow[COL.DELETED - 1])) throw new Error('Активность удалена');
       if (!canEdit_(u, cur)) throw new Error('Нет прав на изменение этой активности');
+      // Снятый с выбора статус можно оставить у старой записи, но нельзя выбрать заново.
+      if (!v.statusActive && v.status !== cur.status) throw new Error(retiredStatusMsg_(v.status));
       id = cur.id;
       author = cur.author;
       created = curRow[COL.CREATED - 1] || now;
     } else {
+      if (!v.statusActive) throw new Error(retiredStatusMsg_(v.status));
       id = newId_();
       author = u.fio;
       created = now;
@@ -228,6 +232,10 @@ function saveActivity_(u, input) {
   var a = rowToAct_(saved.row, saved.rowNum);
   log_(u, saved.isNew ? 'Создана активность' : 'Изменена активность', a.id, a.inn + ' · ' + a.status);
   return pubAct_(u, a);
+}
+
+function retiredStatusMsg_(status) {
+  return 'Статус «' + status + '» больше не используется — выберите другой';
 }
 
 function deleteActivity_(u, args) {
