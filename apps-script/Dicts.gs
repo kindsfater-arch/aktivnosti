@@ -2,7 +2,7 @@
 
 function getDicts_() {
   var cache = CacheService.getScriptCache();
-  var cached = cache.get('dicts2');
+  var cached = cache.get('dicts3');
   if (cached) return JSON.parse(cached);
 
   var sh = sheet_(APP.SHEET.DICT);
@@ -11,12 +11,16 @@ function getDicts_() {
     migrateActiveStatuses_(d);
     d = readDictSheet_(sh);
   }
+  if (Number(prop_('DICT_VERSION') || 0) < DICT_VERSION) {
+    syncDefaultStatuses_(d);
+    d = readDictSheet_(sh);
+  }
   delete d.hasActiveCol;
   if (!d.channels.length) d.channels = DEFAULT_DICTS.channels.slice();
   if (!d.statuses.length) d.statuses = DEFAULT_DICTS.statuses.slice();
   if (!d.types.length) d.types = DEFAULT_DICTS.types.slice();
 
-  cache.put('dicts2', JSON.stringify(d), 600);
+  cache.put('dicts3', JSON.stringify(d), 600);
   return d;
 }
 
@@ -59,6 +63,24 @@ function migrateActiveStatuses_(d) {
   writeDicts_(d);
 }
 
+// Статусы из DEFAULT_DICTS получают тип и доступность из кода, недостающие дописываются в конец.
+// Остальные статусы справочника не трогаем. Версию записываем до writeDicts_: он снова вызывает getDicts_.
+function syncDefaultStatuses_(d) {
+  setProp_('DICT_VERSION', DICT_VERSION);
+  var byName = {};
+  d.statuses.forEach(function (s) { byName[s.name] = s; });
+  DEFAULT_DICTS.statuses.forEach(function (def) {
+    var s = byName[def.name];
+    if (s) {
+      s.kind = def.kind;
+      s.active = def.active;
+    } else {
+      d.statuses.push({ name: def.name, kind: def.kind, active: def.active });
+    }
+  });
+  writeDicts_(d);
+}
+
 function activeStatuses_(d) {
   return (d || getDicts_()).statuses.filter(function (s) { return s.active !== false; });
 }
@@ -87,7 +109,7 @@ function writeDicts_(d) {
   sh.getRange(1, 1, 1, w).setValues([DICT_HEADERS]).setFontWeight('bold');
   if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, w).clearContent();
   if (rows.length) sh.getRange(2, 1, rows.length, w).setValues(rows);
-  CacheService.getScriptCache().remove('dicts2');
+  CacheService.getScriptCache().remove('dicts3');
   applyValidations_();
 }
 

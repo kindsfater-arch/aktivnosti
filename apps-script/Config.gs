@@ -56,12 +56,15 @@ var DEFAULT_DICTS = {
     { name: 'Отказ', kind: 'lost', active: true },
     { name: 'Договор подписан', kind: 'deal', active: true },
     { name: 'Выполнено расширение', kind: 'deal', active: true },
-    { name: 'Нет контактов', kind: 'lost', active: true },
+    { name: 'Нет контактов', kind: 'open', active: true },
     { name: 'Назначено', kind: 'open', active: true },
-    { name: 'Получено согласие', kind: 'open', active: true }
+    { name: 'Получено согласие', kind: 'open', active: true },
+    { name: 'Клиент думает', kind: 'open', active: true }
   ],
   types: ['Звонок', 'Встреча', 'Сообщение']
 };
+// Увеличьте, чтобы статусы из DEFAULT_DICTS (тип и доступность) один раз заново записались в справочник.
+var DICT_VERSION = 2;
 var DICT_HEADERS = ['Канал поступления', 'Статус', 'Тип статуса (Открыт/Сделка/Закрыт)', 'Вид активности', 'Статус доступен для выбора (Да/Нет)'];
 
 var TURN_HEADERS = [
