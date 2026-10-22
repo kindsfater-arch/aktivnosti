@@ -126,6 +126,10 @@ function buildReport_(u, args) {
       };
     });
 
+  // За «всё время» план считаем по текущий месяц включительно, будущие месяцы не добавляем.
+  var t = today_();
+  var plans = planForRange_(range.from, args.period === 'all' ? ymd_(new Date(t.getFullYear(), t.getMonth() + 1, 0)) : range.to);
+
   // Состав команды: для строк «без активностей» и фильтра по типу сотрудника.
   var staff = usersCached_().filter(function (x) { return x.active; })
     .map(function (x) { return { fio: x.fio, type: x.type, role: x.role, no: x.no }; });
@@ -133,6 +137,7 @@ function buildReport_(u, args) {
   return {
     label: range.label,
     staff: staff,
+    plans: plans,
     clients: clients,
     from: range.from,
     to: range.to,

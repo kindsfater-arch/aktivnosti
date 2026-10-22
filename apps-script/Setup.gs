@@ -11,6 +11,7 @@ function setup() {
   ensureSheet_(ss, APP.SHEET.DICT, DICT_HEADERS);
   ensureSheet_(ss, APP.SHEET.TURN, TURN_HEADERS);
   ensureSheet_(ss, APP.SHEET.COMP, COMP_HEADERS);
+  plansSheet_();
   ensureSheet_(ss, APP.SHEET.LOG, LOG_HEADERS);
 
   var dict = ss.getSheetByName(APP.SHEET.DICT);

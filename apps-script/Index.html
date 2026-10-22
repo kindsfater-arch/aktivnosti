@@ -185,6 +185,29 @@ tr.detail > td { background: var(--surface-2); }
 #tip { position: fixed; z-index: 90; pointer-events: none; background: var(--text); color: var(--bg); font-size: 13px; padding: 6px 9px; border-radius: 7px; white-space: pre-line; opacity: 0; transition: opacity .1s; }
 #tip.on { opacity: 1; }
 @media (max-width: 760px) { .barcell { min-width: 0; width: 60%; } }
+/* План и факт: полоска выполнения; таблица видов и статусов с закреплённой колонкой менеджера. */
+.pcell { min-width: 170px; }
+.pcell .pct { font-size: 12px; font-weight: 600; color: var(--warn); margin-left: 4px; }
+.pcell .pct.ok { color: var(--accent); }
+.pcell .pct.low { color: var(--danger); }
+.pbar { height: 6px; border-radius: 3px; background: var(--line); margin-top: 5px; overflow: hidden; }
+.pbar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+.note-line { font-size: 13px; margin: -4px 2px 10px; }
+th.grp { text-align: center; border-left: 1px solid var(--line); }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; background: currentColor; }
+.dot.k-open { color: var(--open); } .dot.k-deal { color: var(--accent); } .dot.k-lost { color: var(--lost); }
+table.wide td { white-space: nowrap; }
+table.wide thead tr + tr th { white-space: normal; min-width: 64px; max-width: 110px; line-height: 1.25; vertical-align: bottom; }
+.plan-tbl td { vertical-align: middle; }
+.plan-tbl input { text-align: right; min-width: 90px; }
+@media (min-width: 761px) {
+  table.wide td:first-child, table.wide thead tr:first-child th:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); }
+  table.wide thead tr:first-child th:first-child { background: var(--surface-2); z-index: 2; }
+}
+@media (max-width: 760px) {
+  .pcell { min-width: 0; width: 60%; text-align: right; }
+  table.resp > tbody > tr > td.z { display: none; }
+}
 </style>
 </head>
 <body>
@@ -701,7 +724,7 @@ async function loadLeads() {
 }
 
 /* ---------- Отчёты: менеджеры на экране + выгрузка в Excel ---------- */
-const REP = { period: 'week', date: isoToday(), from: '', to: '', empType: '', data: null, key: '', seq: 0 };
+const REP = { period: 'week', date: isoToday(), from: '', to: '', empType: '', data: null, key: '', seq: 0, reload: null };
 const repArgs = () => ({ period: REP.period, date: REP.date, from: REP.from, to: REP.to });
 
 VIEWS.reports = async () => {
@@ -747,6 +770,7 @@ VIEWS.reports = async () => {
   };
   $$('input[name=per]').forEach(r => r.addEventListener('change', () => { sync(); load(); }));
   ['#rDate', '#rFrom', '#rTo'].forEach(id => $(id).addEventListener('change', load));
+  REP.reload = load;
   sync();
   $('#rXls').addEventListener('click', e => busy(e.target, 'Готовим файл…', async () => {
     if (!readInputs()) throw new Error('Укажите период: дату начала и окончания');
@@ -765,7 +789,7 @@ const shortFio = f => {
 const share = (a, b) => b ? Math.round(a / b * 100) + '%' : '—';
 
 // Сводка по менеджерам из активностей периода. Сделки — по уникальным ИНН, как в серверном отчёте.
-function managerStats(r) {
+function managerStats(r, empType = REP.empType) {
   const kinds = S.kinds;
   const types = S.dicts.types;
   const typeColor = t => ['var(--c-t1)', 'var(--c-t2)', 'var(--c-t3)'][types.indexOf(t)] || 'var(--c-other)';
@@ -779,19 +803,25 @@ function managerStats(r) {
     return segKeys.has(k) ? k : 'other';
   };
   const missName = (S.dicts.statuses.find(x => /недозвон/i.test(x.name)) || {}).name || '';
+  // Колонки статусов: доступные из справочника, затем снятые с выбора и прочие, если они встречаются в периоде.
+  const statusCols = S.dicts.statuses.filter(x => x.active !== false).map(x => x.name);
+  r.details.forEach(a => { if (a.status && statusCols.indexOf(a.status) < 0) statusCols.push(a.status); });
 
   const staffType = {};
   (r.staff || []).forEach(u => { staffType[u.fio] = u.type; });
   const overdue = {};
   r.overdue.forEach(o => { overdue[o.fio] = o.count; });
+  const plans = (r.plans && r.plans.byFio) || {};
 
   const byFio = {};
-  const blank = fio => ({ fio, type: staffType[fio] || '', acts: 0, byType: {}, bySeg: {}, matrix: {}, missed: 0, inns: new Set(), deals: {}, overdue: overdue[fio] || 0 });
+  const blank = fio => ({ fio, type: staffType[fio] || '', acts: 0, byType: {}, byStatus: {}, bySeg: {}, matrix: {}, missed: 0,
+    inns: new Set(), deals: {}, overdue: overdue[fio] || 0, plan: plans[fio] || null });
   r.details.forEach(a => {
     const m = byFio[a.fio] || (byFio[a.fio] = blank(a.fio));
     const seg = segOf(a), t = types.indexOf(a.type) >= 0 ? a.type : 'Прочее';
     m.acts++;
     m.byType[t] = (m.byType[t] || 0) + 1;
+    m.byStatus[a.status] = (m.byStatus[a.status] || 0) + 1;
     m.bySeg[seg] = (m.bySeg[seg] || 0) + 1;
     (m.matrix[t] || (m.matrix[t] = {}))[seg] = (m.matrix[t][seg] || 0) + 1;
     if (missName && a.status === missName) m.missed++;
@@ -804,75 +834,189 @@ function managerStats(r) {
   if (Object.values(byFio).some(m => m.bySeg.other)) segs.push({ key: 'other', label: 'Прочие статусы', color: 'var(--c-other)' });
 
   const employees = (r.staff || []).filter(u => u.role === 'Сотрудник').map(u => u.fio);
-  employees.forEach(f => { if (!byFio[f]) byFio[f] = blank(f); });
+  employees.concat(Object.keys(plans)).forEach(f => { if (!byFio[f]) byFio[f] = blank(f); });
   let list = Object.values(byFio);
   const empTypes = [...new Set(list.map(m => m.type).filter(Boolean))].sort();
-  if (REP.empType) list = list.filter(m => m.type === REP.empType);
+  if (empType) list = list.filter(m => m.type === empType);
   list.forEach(m => {
     m.dealList = Object.values(m.deals);
     m.dealSum = m.dealList.reduce((x, a) => x + (a.dealSum || 0), 0);
   });
   list.sort((a, b) => b.acts - a.acts || a.fio.localeCompare(b.fio, 'ru'));
-  return { list, segs, types, typeColor, missName, empTypes };
+  return { list, segs, types, typeColor, missName, empTypes, statusCols };
+}
+
+const pctOf = (fact, plan) => plan ? Math.round(fact / plan * 100) : null;
+const fmtPlanN = n => String(Math.round(n * 10) / 10).replace('.', ',');
+
+// Факт против плана: число, «из плана», процент и полоска выполнения.
+function planCell(fact, plan, fmt) {
+  const p = pctOf(fact, plan);
+  if (p == null) return `<div class="pcell"><div><b>${fmt(fact)}</b> <span class="muted">без плана</span></div></div>`;
+  return `<div class="pcell"><div><b>${fmt(fact)}</b> <span class="muted">из ${fmt(plan)}</span>
+    <span class="pct ${p >= 100 ? 'ok' : p < 50 ? 'low' : ''}">${p}%</span></div>
+    <div class="pbar"><i style="width:${Math.min(100, p)}%"></i></div></div>`;
 }
 
 function renderManagers() {
   const r = REP.data;
   const st = managerStats(r);
+  const shown = st.list.filter(m => m.acts || m.plan);
   const active = st.list.filter(m => m.acts);
   const idle = st.list.filter(m => !m.acts);
-  const tot = active.reduce((o, m) => {
+  const tot = st.list.reduce((o, m) => {
     o.acts += m.acts; o.missed += m.missed; o.deals += m.dealList.length; o.dealSum += m.dealSum;
     o.lost += m.bySeg.lost || 0;
-    st.types.forEach(t => { o.byType[t] = (o.byType[t] || 0) + (m.byType[t] || 0); });
+    if (m.plan) { o.planDeals += m.plan.deals; o.planVolume += m.plan.volume; }
+    st.types.concat('Прочее').forEach(t => { o.byType[t] = (o.byType[t] || 0) + (m.byType[t] || 0); });
+    st.statusCols.forEach(s => { o.byStatus[s] = (o.byStatus[s] || 0) + (m.byStatus[s] || 0); });
     return o;
-  }, { acts: 0, missed: 0, deals: 0, dealSum: 0, lost: 0, byType: {} });
+  }, { acts: 0, missed: 0, deals: 0, dealSum: 0, lost: 0, planDeals: 0, planVolume: 0, byType: {}, byStatus: {} });
   const maxActs = Math.max(1, ...active.map(m => m.acts));
+  const typeCols = st.types.concat(tot.byType['Прочее'] ? ['Прочее'] : []);
+  const statusCols = st.statusCols.filter(s => tot.byStatus[s] || S.dicts.statuses.some(x => x.name === s && x.active !== false));
+  const hasPlans = tot.planDeals > 0 || tot.planVolume > 0;
 
   const kpi = (v, l, sub) => `<div class="card kpi"><b>${v}</b><span>${l}</span>${sub ? `<small>${sub}</small>` : ''}</div>`;
+  const planSub = (fact, plan, fmt) => plan ? `план ${fmt(plan)} · выполнено ${pctOf(fact, plan)}%` : 'план не задан';
   const stack = (parts, total) => parts.filter(p => p.n).map(p =>
     `<i style="flex:${p.n} 1 0;background:${p.color}" data-tip="${esc(p.label + ': ' + p.n + (total ? ' (' + share(p.n, total) + ')' : ''))}"></i>`).join('');
   const typeParts = m => st.types.map(t => ({ n: m.byType[t] || 0, color: st.typeColor(t), label: t })).concat(
     m.byType['Прочее'] ? [{ n: m.byType['Прочее'], color: 'var(--c-other)', label: 'Прочее' }] : []);
-  const segParts = m => st.segs.map(x => ({ n: m.bySeg[x.key] || 0, color: x.color, label: x.label }));
+  const kindCls = s => 'k-' + (S.kinds[s] || 'open');
+  const n0 = (n, label) => `<td data-l="${esc(label)}" class="num${n ? '' : ' z'}">${n || ''}</td>`;
 
   const typeFilter = st.empTypes.length > 1 ? `<div class="seg" id="empSeg">${[['', 'Все']].concat(st.empTypes.map(t => [t, t])).map(t =>
     `<label><input type="radio" name="emp" value="${esc(t[0])}"${t[0] === REP.empType ? ' checked' : ''}><span>${esc(t[1])}</span></label>`).join('')}</div>` : '';
+  const planBtn = S.me.seeAll ? '<button class="btn" id="rPlans">Планы</button>' : '';
+  const planNote = !hasPlans
+    ? (S.me.seeAll ? 'Планы на этот период не заданы. Нажмите «Планы», чтобы задать их по сотрудникам.' : 'Планы на этот период не заданы.')
+    : r.plans.partial ? 'План на период — часть месячного плана пропорционально числу дней.' : '';
 
   $('#rOut').innerHTML = `
     <div class="kpis">
       ${kpi(money(tot.acts), 'активностей', st.types.map(t => t.toLowerCase() + ' ' + (tot.byType[t] || 0)).join(' · '))}
       ${st.missName ? kpi(share(tot.acts - tot.missed, tot.acts), 'контакт состоялся', `${st.missName.toLowerCase()}: ${tot.missed}`) : ''}
-      ${kpi(money(tot.deals), 'сделок', tot.dealSum ? 'на ' + rub(tot.dealSum) : '')}
-      ${kpi(money(tot.lost), 'отказов и блокировок', '')}
+      ${kpi(money(tot.deals), 'сделок', planSub(tot.deals, tot.planDeals, fmtPlanN))}
+      ${kpi(rub(tot.dealSum), 'объём сделок', planSub(tot.dealSum, tot.planVolume, rub))}
       ${kpi(active.length + ' из ' + st.list.length, 'менеджеров работали', idle.length ? 'без активностей: ' + idle.length : 'все отметились')}
     </div>
-    ${typeFilter ? `<div class="toolbar">${typeFilter}</div>` : ''}
-    <div class="legend">
-      <span><b>Активности:</b></span>${st.types.map(t => `<span><i style="background:${st.typeColor(t)}"></i>${esc(t)}</span>`).join('')}
-      <span style="margin-left:12px"><b>Результат:</b></span>${st.segs.map(x => `<span><i style="background:${x.color}"></i>${esc(x.label)}</span>`).join('')}
-    </div>
-    ${active.length ? `<div class="card tbl-wrap"><table class="resp"><thead><tr>
-        <th>Менеджер</th><th>Активности</th><th>Результаты</th>
-        ${st.missName ? '<th class="num">Контакт</th>' : ''}<th class="num">Сделки</th><th class="num">Просрочено шагов</th></tr></thead>
-      <tbody>${active.map((m, i) => `
+    ${typeFilter || planBtn ? `<div class="toolbar">${typeFilter}<span class="sp"></span>${planBtn}</div>` : ''}
+
+    <h3>Выполнение плана по сделкам</h3>
+    ${planNote ? `<div class="muted note-line">${esc(planNote)}</div>` : ''}
+    ${shown.length ? `<div class="card tbl-wrap"><table class="resp"><thead><tr>
+        <th>Менеджер</th><th>Активности</th><th>Сделки</th><th>Объём сделок</th>
+        ${st.missName ? '<th class="num">Контакт</th>' : ''}<th class="num">Просрочено шагов</th></tr></thead>
+      <tbody>${shown.map((m, i) => `
         <tr class="click" data-m="${i}">
           <td data-l="Менеджер"><div><b>${esc(shortFio(m.fio))}</b>${m.type ? ` <span class="muted">${esc(m.type)}</span>` : ''}</div></td>
           <td data-l="Активности"><div class="barcell"><div class="track"><div class="stack" style="width:${Math.max(4, m.acts / maxActs * 100)}%">${stack(typeParts(m), m.acts)}</div></div><span class="num">${m.acts}</span></div></td>
-          <td data-l="Результаты"><div class="barcell"><div class="track"><div class="stack">${stack(segParts(m), m.acts)}</div></div></div></td>
+          <td data-l="Сделки">${planCell(m.dealList.length, m.plan && m.plan.deals, fmtPlanN)}</td>
+          <td data-l="Объём сделок">${planCell(m.dealSum, m.plan && m.plan.volume, rub)}</td>
           ${st.missName ? `<td data-l="Контакт" class="num">${share(m.acts - m.missed, m.acts)}</td>` : ''}
-          <td data-l="Сделки" class="num">${m.dealList.length ? `<div><b>${m.dealList.length}</b><br><span class="muted">${money(m.dealSum)} ₽</span></div>` : '—'}</td>
           <td data-l="Просрочено" class="num">${m.overdue ? `<span class="badge red">${m.overdue}</span>` : '—'}</td>
         </tr>
         <tr class="detail hidden" id="md${i}"><td colspan="${st.missName ? 6 : 5}">${managerDetail(m, st)}</td></tr>`).join('')}
+        <tr class="total">
+          <td data-l="">Итого</td><td data-l="Активности" class="num">${money(tot.acts)}</td>
+          <td data-l="Сделки">${planCell(tot.deals, tot.planDeals, fmtPlanN)}</td>
+          <td data-l="Объём сделок">${planCell(tot.dealSum, tot.planVolume, rub)}</td>
+          ${st.missName ? `<td data-l="Контакт" class="num">${share(tot.acts - tot.missed, tot.acts)}</td>` : ''}
+          <td data-l="Просрочено" class="num">${money(st.list.reduce((x, m) => x + m.overdue, 0)) || '—'}</td>
+        </tr>
       </tbody></table></div>
-      <div class="muted" style="font-size:12px;margin:6px 2px">Нажмите на строку, чтобы увидеть виды активности по результатам и список сделок. «Просрочено шагов» — на сегодня.</div>`
+      <div class="muted" style="font-size:12px;margin:6px 2px">Сделка — клиент (ИНН), по которому в периоде поставлен статус с типом «Сделка». Нажмите на строку, чтобы увидеть виды активности по результатам и список сделок.</div>`
+    : '<div class="card pad empty">За выбранный период нет ни активностей, ни планов</div>'}
+
+    <h3>Активности по видам и статусам</h3>
+    ${active.length ? `<div class="card tbl-wrap"><table class="resp wide"><thead>
+        <tr><th rowspan="2">Менеджер</th><th rowspan="2" class="num">Всего</th>
+          <th colspan="${typeCols.length}" class="grp">Виды активности</th><th colspan="${statusCols.length}" class="grp">Статусы</th></tr>
+        <tr>${typeCols.map(t => `<th class="num">${esc(t)}</th>`).join('')}${statusCols.map(s => `<th class="num"><span class="dot ${kindCls(s)}"></span>${esc(s)}</th>`).join('')}</tr></thead>
+      <tbody>${active.map(m => `<tr>
+          <td data-l="Менеджер"><b>${esc(shortFio(m.fio))}</b></td><td data-l="Всего" class="num"><b>${m.acts}</b></td>
+          ${typeCols.map(t => n0(m.byType[t], t)).join('')}${statusCols.map(s => n0(m.byStatus[s], s)).join('')}</tr>`).join('')}
+        <tr class="total"><td data-l="">Итого</td><td data-l="Всего" class="num">${money(tot.acts)}</td>
+          ${typeCols.map(t => n0(tot.byType[t], t)).join('')}${statusCols.map(s => n0(tot.byStatus[s], s)).join('')}</tr>
+      </tbody></table></div>`
     : '<div class="card pad empty">За выбранный период активностей нет</div>'}
     ${idle.length ? `<details class="card pad" style="margin-top:12px"><summary>Без активностей за период: ${idle.length}</summary>
       <div style="margin-top:8px">${idle.map(m => esc(shortFio(m.fio)) + (m.overdue ? ` <span class="badge red" title="просрочено шагов">${m.overdue}</span>` : '')).join(', ')}</div></details>` : ''}`;
 
   $$('tr[data-m]', $('#rOut')).forEach(tr => tr.addEventListener('click', () => $('#md' + tr.dataset.m).classList.toggle('hidden')));
   $$('input[name=emp]', $('#rOut')).forEach(x => x.addEventListener('change', () => { REP.empType = x.value; renderManagers(); }));
+  if ($('#rPlans')) $('#rPlans').addEventListener('click', () => plansForm(REP.period === 'all' ? isoToday().slice(0, 7) : r.from.slice(0, 7)));
+}
+
+// Планы на месяц: сделки (шт) и объём сделок (₽) по каждому сотруднику.
+async function plansForm(month) {
+  const opts = [];
+  const base = new Date();
+  for (let i = -12; i <= 12; i++) {
+    const d = new Date(base.getFullYear(), base.getMonth() + i, 1);
+    opts.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'));
+  }
+  if (opts.indexOf(month) < 0) opts.push(month);
+  opts.sort();
+  const monthLabel = k => MONTHS[+k.slice(5, 7) - 1] + ' ' + k.slice(0, 4);
+  const num = v => +String(v || '').replace(/[^\d]/g, '') || 0;
+  let dirty = false;
+
+  openModal(`<div class="mhead"><h2>Планы по сделкам</h2><button class="icon" data-close aria-label="Закрыть">✕</button></div>
+    <div class="form" id="pBody"><div class="loading">Загрузка…</div></div>`);
+  let d;
+  try { d = await call('plans', { month }); } catch (e) { closeModal(); toast(e.message, true); return; }
+
+  $('#pBody').innerHTML = `
+    <div class="toolbar" style="margin:0">
+      <label>Месяц<select id="pMonth">${opts.map(k => opt(k, d.month, monthLabel(k))).join('')}</select></label>
+      <span class="sp"></span><button class="btn sm" id="pPrev" type="button">Как в прошлом месяце</button>
+    </div>
+    ${d.rows.length ? `<div class="tbl-wrap"><table class="plan-tbl"><thead><tr><th>Сотрудник</th><th class="num">Сделок, шт</th><th class="num">Объём сделок, ₽</th></tr></thead>
+      <tbody>${d.rows.map((x, i) => `<tr data-i="${i}">
+        <td><b>${esc(shortFio(x.fio))}</b>${x.type ? ` <span class="muted">${esc(x.type)}</span>` : ''}</td>
+        <td><input name="deals" inputmode="numeric" autocomplete="off" value="${x.deals ? esc(money(x.deals)) : ''}" aria-label="Сделок, шт"></td>
+        <td><input name="volume" inputmode="numeric" autocomplete="off" value="${x.volume ? esc(money(x.volume)) : ''}" aria-label="Объём сделок, ₽"></td></tr>`).join('')}</tbody>
+      <tfoot><tr class="total"><td>Итого</td><td class="num" id="pTD"></td><td class="num" id="pTV"></td></tr></tfoot></table></div>`
+    : '<div class="empty">Нет активных сотрудников с ролью «Сотрудник»</div>'}
+    <small class="muted">Пустое поле — план не задан. В отчёте за неделю или день план берётся пропорционально числу дней месяца.</small>
+    <div><button class="btn primary" id="pSave"${d.rows.length ? '' : ' disabled'}>Сохранить</button></div>`;
+
+  const rows = () => $$('tr[data-i]', $('#pBody'));
+  const totals = () => {
+    let td = 0, tv = 0;
+    rows().forEach(tr => { td += num($('[name=deals]', tr).value); tv += num($('[name=volume]', tr).value); });
+    $('#pTD').textContent = money(td);
+    $('#pTV').textContent = money(tv);
+  };
+  if (d.rows.length) totals();
+  $('#pBody').addEventListener('input', e => { if (e.target.name) { dirty = true; totals(); } });
+  // Разряды в объёме расставляем после ввода, чтобы 1500000 читалось как 1 500 000.
+  $('#pBody').addEventListener('change', e => { if (e.target.name) e.target.value = num(e.target.value) ? money(num(e.target.value)) : ''; });
+  $('#pMonth').addEventListener('change', e => {
+    if (dirty && !confirm('Несохранённые планы за ' + monthLabel(d.month) + ' пропадут. Перейти к другому месяцу?')) { e.target.value = d.month; return; }
+    plansForm(e.target.value);
+  });
+  $('#pPrev').addEventListener('click', () => {
+    if (!d.rows.some(x => x.prevDeals || x.prevVolume)) { toast('В прошлом месяце планов нет'); return; }
+    rows().forEach(tr => {
+      const x = d.rows[+tr.dataset.i];
+      $('[name=deals]', tr).value = x.prevDeals ? money(x.prevDeals) : '';
+      $('[name=volume]', tr).value = x.prevVolume ? money(x.prevVolume) : '';
+    });
+    dirty = true;
+    totals();
+  });
+  $('#pSave').addEventListener('click', e => busy(e.target, 'Сохраняем…', async () => {
+    const list = rows().map(tr => ({ fio: d.rows[+tr.dataset.i].fio, deals: num($('[name=deals]', tr).value), volume: num($('[name=volume]', tr).value) }));
+    await call('savePlans', { month: d.month, rows: list });
+    dirty = false;
+    closeModal();
+    toast('Планы на ' + monthLabel(d.month).toLowerCase() + ' сохранены');
+    REP.key = '';
+    if (S.tab === 'reports' && REP.reload) REP.reload();
+  }));
 }
 
 function managerDetail(m, st) {
@@ -935,6 +1079,7 @@ function reportWorkbook(r) {
     });
     fmt(o.money, '#,##0');
     fmt(o.dates, 'dd.mm.yyyy');
+    fmt(o.percent, '0%');
     ws['!cols'] = o.widths.map(w => ({ wch: w }));
     if (o.filter && rows.length > 1) {
       ws['!autofilter'] = { ref: X.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length - 1, c: rows[0].length - 1 } }) };
@@ -942,6 +1087,7 @@ function reportWorkbook(r) {
     X.book_append_sheet(wb, ws, name.slice(0, 31));
   };
   const s = r.summary;
+  const mgr = managerStats(r, '');
   sheet('Сводка', [
     ['Показатель', 'Значение'],
     ['Отчёт', r.label],
@@ -953,12 +1099,25 @@ function reportWorkbook(r) {
     ['Сделок (клиентов)', s.deals],
     ['Сумма сделок, ₽', s.dealSum],
     ['Отказы и блокировки', s.lost],
+    ['План сделок на период', mgr.list.reduce((x, m) => x + (m.plan ? m.plan.deals : 0), 0) || '—'],
+    ['План объёма сделок на период, ₽', mgr.list.reduce((x, m) => x + (m.plan ? m.plan.volume : 0), 0) || '—'],
     ['Потенциал клиентов за период, ₽/мес', s.potential],
     ['Открытая воронка, клиентов', r.pipeline.count],
     ['Потенциал открытой воронки, ₽/мес', r.pipeline.potential],
     ['Следующие шаги в ближайшие 30 дней', r.pipeline.next30],
     ['Сотрудники без активностей', r.idle.join(', ') || '—']
   ]), { money: [1], widths: [40, 60] });
+
+  // Менеджеры: план и факт по сделкам, активности по видам и статусам.
+  const mTypes = mgr.types.concat(mgr.list.some(m => m.byType['Прочее']) ? ['Прочее'] : []);
+  const pct = (f, p) => p ? Math.round(f / p * 100) / 100 : '';
+  const mHead = ['ФИО', 'Тип сотрудника', 'Сделок', 'План сделок', '% плана', 'Объём сделок, ₽', 'План объёма, ₽', '% плана',
+    'Активностей'].concat(mTypes, mgr.statusCols, ['Просрочено шагов']);
+  const mRows = mgr.list.filter(m => m.acts || m.plan).map(m => [m.fio, m.type,
+    m.dealList.length, m.plan ? m.plan.deals : '', pct(m.dealList.length, m.plan && m.plan.deals),
+    m.dealSum, m.plan ? m.plan.volume : '', pct(m.dealSum, m.plan && m.plan.volume), m.acts]
+    .concat(mTypes.map(t => m.byType[t] || 0), mgr.statusCols.map(x => m.byStatus[x] || 0), [m.overdue]));
+  sheet('Менеджеры', [mHead].concat(mRows), { money: [5, 6], percent: [4, 7], widths: [32, 10].concat(mHead.slice(2).map(() => 12)), filter: true });
 
   const head = ['Разрез', 'Активностей'].concat(r.types,
     ['Клиентов', 'Новых клиентов', 'Сделок', 'Сумма сделок', 'Отказы и блокировки', 'Потенциал, мес']);
