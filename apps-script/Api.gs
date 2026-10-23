@@ -76,6 +76,7 @@ function routes_() {
     deals: { fn: getDeals_ },
     leads: { fn: getLeads_ },
     reportData: { fn: buildReport_, need: 'canReport' },
+    planProgress: { fn: planProgress_ },
     plans: { fn: getPlans_, need: 'seeAll' },
     savePlans: { fn: savePlans_, need: 'seeAll' },
     users: { fn: function () { return listUsers_(); }, need: 'isAdmin' },

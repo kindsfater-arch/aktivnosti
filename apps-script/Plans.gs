@@ -114,3 +114,44 @@ function planForRange_(from, to) {
   });
   return { byFio: byFio, months: months, partial: partial };
 }
+
+// Выполнение плана за месяц — видят все сотрудники. Факт сделок считается как в отчёте: уникальные ИНН
+// со статусом типа «Сделка», сумма по последней такой активности клиента. Рабочие дни (пн–пт, без праздников)
+// нужны интерфейсу для прогноза RR и расчёта «сколько нужно в день».
+function planProgress_(u, args) {
+  var month = monthKey_(args.month) || Utilities.formatDate(new Date(), APP.TZ, 'yyyy-MM');
+  var y = +month.slice(0, 4), m = +month.slice(5, 7), dim = new Date(y, m, 0).getDate();
+  var from = month + '-01', to = month + '-' + (dim < 10 ? '0' : '') + dim;
+  var plan = readPlans_()[month] || {};
+  var kinds = statusKinds_();
+
+  var deals = {};
+  readActivities_().forEach(function (a) {
+    if (a.date < from || a.date > to || kinds[a.status] !== 'deal') return;
+    var byInn = deals[a.fio] || (deals[a.fio] = {});
+    var cur = byInn[a.inn];
+    if (!cur || a.date + a.created > cur.date + cur.created) byInn[a.inn] = a;
+  });
+
+  var today = ymd_(today_()), workdays = { total: 0, passed: 0 };
+  for (var d = 1; d <= dim; d++) {
+    var dt = new Date(y, m - 1, d), dow = dt.getDay();
+    if (dow === 0 || dow === 6) continue;
+    workdays.total++;
+    if (ymd_(dt) <= today) workdays.passed++;
+  }
+
+  var types = typeByFio_(), fios = {};
+  Object.keys(plan).concat(Object.keys(deals)).forEach(function (f) { fios[f] = true; });
+  if (u.role === ROLES.EMPLOYEE) fios[u.fio] = true;
+  var rows = Object.keys(fios).map(function (fio) {
+    var list = Object.keys(deals[fio] || {}).map(function (inn) { return deals[fio][inn]; });
+    return {
+      fio: fio,
+      type: types[fio] || '',
+      plan: plan[fio] || null,
+      fact: { deals: list.length, volume: list.reduce(function (s, a) { return s + (a.dealSum || 0); }, 0) }
+    };
+  });
+  return { month: month, today: today, workdays: workdays, rows: rows };
+}
