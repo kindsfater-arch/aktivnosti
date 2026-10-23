@@ -115,15 +115,25 @@ function planForRange_(from, to) {
   return { byFio: byFio, months: months, partial: partial };
 }
 
-// Выполнение плана за месяц — видят все сотрудники. Факт сделок считается как в отчёте: уникальные ИНН
-// со статусом типа «Сделка», сумма по последней такой активности клиента. Рабочие дни (пн–пт, без праздников)
-// нужны интерфейсу для прогноза RR и расчёта «сколько нужно в день».
+// Выполнение плана за месяц — видят все сотрудники.
+// Продажи (шт) — из листа «Продажи» по дате регистрации; продажи без МПП идут строкой с пустым ФИО.
+// Объём (₽) — из активностей: уникальные ИНН со статусом типа «Сделка», сумма по последней такой активности клиента.
+// Рабочие дни (пн–пт, без праздников) нужны интерфейсу для прогноза RR и расчёта «сколько нужно в день».
 function planProgress_(u, args) {
   var month = monthKey_(args.month) || Utilities.formatDate(new Date(), APP.TZ, 'yyyy-MM');
   var y = +month.slice(0, 4), m = +month.slice(5, 7), dim = new Date(y, m, 0).getDate();
   var from = month + '-01', to = month + '-' + (dim < 10 ? '0' : '') + dim;
   var plan = readPlans_()[month] || {};
   var kinds = statusKinds_();
+
+  // Первая загрузка продаж — сразу, не дожидаясь ночного запуска; заодно ставится ежедневный триггер.
+  if (!prop_('SALES_AT')) {
+    try { importSales(); } catch (e) { console.error('importSales: ' + e.message); }
+  }
+  var sales = {};
+  readSales_().forEach(function (x) {
+    if (x.date >= from && x.date <= to) sales[x.fio] = (sales[x.fio] || 0) + 1;
+  });
 
   var deals = {};
   readActivities_().forEach(function (a) {
@@ -142,7 +152,7 @@ function planProgress_(u, args) {
   }
 
   var types = typeByFio_(), fios = {};
-  Object.keys(plan).concat(Object.keys(deals)).forEach(function (f) { fios[f] = true; });
+  Object.keys(plan).concat(Object.keys(deals), Object.keys(sales)).forEach(function (f) { fios[f] = true; });
   if (u.role === ROLES.EMPLOYEE) fios[u.fio] = true;
   var rows = Object.keys(fios).map(function (fio) {
     var list = Object.keys(deals[fio] || {}).map(function (inn) { return deals[fio][inn]; });
@@ -150,8 +160,8 @@ function planProgress_(u, args) {
       fio: fio,
       type: types[fio] || '',
       plan: plan[fio] || null,
-      fact: { deals: list.length, volume: list.reduce(function (s, a) { return s + (a.dealSum || 0); }, 0) }
+      fact: { sales: sales[fio] || 0, volume: list.reduce(function (s, a) { return s + (a.dealSum || 0); }, 0) }
     };
   });
-  return { month: month, today: today, workdays: workdays, rows: rows };
+  return { month: month, today: today, workdays: workdays, rows: rows, sales: salesStatus_() };
 }

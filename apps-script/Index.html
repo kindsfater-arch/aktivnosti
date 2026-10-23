@@ -305,6 +305,7 @@ const shiftDays = (iso, n) => { const d = new Date(iso + 'T00:00:00'); d.setDate
 const monthStart = iso => iso.slice(0, 8) + '01';
 const MONTHS = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
 const monthName = key => key === 'none' ? 'Без даты следующего шага' : key === 'overdue' ? 'Просрочено' : MONTHS[+key.slice(5, 7) - 1] + ' ' + key.slice(0, 4);
+const PRIORITIES = ['Ключевой', 'Неключевой'];
 const opt = (v, sel, label) => `<option value="${esc(v)}"${v === sel ? ' selected' : ''}>${esc(label == null ? v : label)}</option>`;
 const kindOf = status => S.kinds[status] || 'open';
 // Статусы для выбора. Снятый с выбора текущий статус старой записи остаётся в списке, чтобы его не пришлось менять.
@@ -439,7 +440,7 @@ function bindItemButtons() {
 }
 
 function followUp(i) {
-  openForm({ fio: i.fio, inn: i.inn, short: i.short, full: i.full, channel: i.channel, status: i.status, potential: i.potential, potSrc: i.potSrc });
+  openForm({ fio: i.fio, inn: i.inn, short: i.short, full: i.full, priority: i.priority, channel: i.channel, status: i.status, potential: i.potential, potSrc: i.potSrc });
 }
 
 /* ---------- Активности ---------- */
@@ -517,6 +518,9 @@ function openForm(pre, errMsg) {
         <label class="fld"><span>ИНН *</span><input name="inn" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="10 или 12 цифр" value="${esc(a.inn || '')}"></label>
         <label class="fld"><span>Дата активности *</span><input type="date" name="date" value="${esc(a.date || '')}"></label>
       </div>
+      <div class="fld"><span>Приоритет клиента *</span><div class="seg">${PRIORITIES.map(p =>
+        `<label><input type="radio" name="priority" value="${p}"${p === a.priority ? ' checked' : ''}><span>${p}</span></label>`).join('')}</div>
+        <small id="prHint"></small></div>
       <div id="innCard" class="inncard hidden"></div>
       <label class="fld"><span>Краткое название ЮЛ</span><input name="short" value="${esc(a.short || '')}" placeholder="заполнится по ИНН"></label>
       <label class="fld"><span>Полное название ЮЛ</span><input name="full" value="${esc(a.full || '')}" placeholder="заполнится по ИНН"></label>
@@ -563,6 +567,7 @@ function openForm(pre, errMsg) {
   let autoPot = !a.potential || a.potSrc !== 'вручную';
   f.short.addEventListener('input', () => { autoNames = false; });
   f.potential.addEventListener('input', () => { autoPot = false; $('#potHint').textContent = 'введён вручную'; });
+  $$('input[name=priority]', f).forEach(el => el.addEventListener('change', () => { $('#prHint').textContent = ''; }));
 
   const lookup = async inn => {
     const card = $('#innCard');
@@ -574,6 +579,11 @@ function openForm(pre, errMsg) {
       if (r.company && autoNames && !ro) {
         f.short.value = r.company.short || '';
         f.full.value = r.company.full || '';
+      }
+      // Приоритет подставляем, только если его ещё не выбрали.
+      if (r.priority && !ro && !f.querySelector('input[name=priority]:checked')) {
+        const el = f.querySelector(`input[name=priority][value="${r.priority.value}"]`);
+        if (el) { el.checked = true; $('#prHint').textContent = 'подставлен ' + r.priority.source + ', проверьте'; }
       }
       if (r.potential != null && autoPot && !ro) {
         f.potential.value = r.potential;
@@ -612,10 +622,12 @@ function openForm(pre, errMsg) {
       id: a.id || '', fio: f.fio ? f.fio.value : a.fio, inn: f.inn.value.trim(), date: f.date.value,
       short: f.short.value.trim(), full: f.full.value.trim(), channel: f.channel.value, status: f.status.value,
       type: (f.querySelector('input[name=type]:checked') || {}).value || '', next: f.next.value,
+      priority: (f.querySelector('input[name=priority]:checked') || {}).value || '',
       comment: f.comment.value.trim(), dealSum: f.dealSum.value.trim(), potential: f.potential.value.trim()
     };
     const err = !/^(\d{10}|\d{12})$/.test(v.inn) ? 'ИНН должен содержать 10 или 12 цифр'
       : !v.date ? 'Укажите дату активности'
+      : !v.priority ? 'Укажите приоритет клиента: ключевой или неключевой'
       : !v.type ? 'Выберите вид активности'
       : !v.channel ? 'Выберите канал поступления'
       : !v.status ? 'Выберите статус'
@@ -930,29 +942,32 @@ function renderPlanBlock(d) {
       ${sub ? `<small>${sub}</small>` : ''}</div>`;
   };
   const card = (title, r, cls) => `<div class="card pv-card ${cls}"><div class="pv-who">${title}</div>
-    ${mcard('Сделки, шт', r.plan && r.plan.deals, r.fact.deals, fmtPlanN)}${mcard('Объём, ₽', r.plan && r.plan.volume, r.fact.volume, money)}</div>`;
+    ${mcard('Продажи, шт', r.plan && r.plan.deals, r.fact.sales, fmtPlanN)}${mcard('Объём, ₽', r.plan && r.plan.volume, r.fact.volume, money)}</div>`;
   const block = (title, r, cls) => `<tr class="who-row ${cls}"><td colspan="7">${title}</td></tr>` +
-    metric('Сделки, шт', r.plan && r.plan.deals, r.fact.deals, fmtPlanN) +
+    metric('Продажи, шт', r.plan && r.plan.deals, r.fact.sales, fmtPlanN) +
     metric('Объём сделок, ₽', r.plan && r.plan.volume, r.fact.volume, money);
 
   // Сначала сотрудники с планом — по исполнению плана по объёму, затем без плана — по факту.
-  const ex = r => r.plan && r.plan.volume ? r.fact.volume / r.plan.volume : r.plan && r.plan.deals ? r.fact.deals / r.plan.deals : -1;
+  const ex = r => r.plan && r.plan.volume ? r.fact.volume / r.plan.volume : r.plan && r.plan.deals ? r.fact.sales / r.plan.deals : -1;
   const mine = r => r.fio === S.me.fio ? 1 : 0;
-  const rows = d.rows.slice().sort((a, b) => mine(b) - mine(a) || (!!b.plan - !!a.plan) || ex(b) - ex(a) ||
+  const rows = d.rows.slice().sort((a, b) => mine(b) - mine(a) || (!a.fio - !b.fio) || (!!b.plan - !!a.plan) || ex(b) - ex(a) ||
     b.fact.volume - a.fact.volume || a.fio.localeCompare(b.fio, 'ru'));
-  const title = r => `${esc(shortFio(r.fio))}${r.type ? ` <span class="muted">${esc(r.type)}</span>` : ''}${mine(r) ? ' <span class="chip k-deal">вы</span>' : ''}`;
+  const title = r => !r.fio ? '<span class="muted">Продажи без МПП</span>' : `${esc(shortFio(r.fio))}${r.type ? ` <span class="muted">${esc(r.type)}</span>` : ''}${mine(r) ? ' <span class="chip k-deal">вы</span>' : ''}`;
   const team = rows.reduce((t, r) => {
     if (r.plan) { t.plan.deals += r.plan.deals; t.plan.volume += r.plan.volume; }
-    t.fact.deals += r.fact.deals; t.fact.volume += r.fact.volume;
+    t.fact.sales += r.fact.sales; t.fact.volume += r.fact.volume;
     return t;
-  }, { plan: { deals: 0, volume: 0 }, fact: { deals: 0, volume: 0 } });
+  }, { plan: { deals: 0, volume: 0 }, fact: { sales: 0, volume: 0 } });
   if (!team.plan.deals && !team.plan.volume) team.plan = null;
 
   const note = !started ? 'Месяц ещё не начался.'
     : done ? 'Месяц завершён: прогноз равен факту, «осталось до плана» — сколько не хватило.'
     : `Рабочих дней прошло ${wd.passed} из ${wd.total}, осталось ${left}. Прогноз (RR) — результат на конец месяца при текущем темпе. Праздники не учитываются.`;
+  const src = 'Продажи, шт — из файла продаж по дате регистрации' +
+    (d.sales && d.sales.at ? ', загружено ' + new Date(d.sales.at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '') +
+    '. Объём, ₽ — по суммам сделок в активностях.';
 
-  $('#planBox').innerHTML = `<div class="muted note-line">${note}</div>
+  $('#planBox').innerHTML = `<div class="muted note-line">${note}<br>${src}</div>
     ${rows.length ? `<div class="card tbl-wrap pv-table"><table class="plan-v"><thead><tr>
       <th>Показатель</th><th class="num">План</th><th class="num">Факт</th><th class="num">Исполнение</th>
       <th class="num">Прогноз (RR)</th><th class="num">Осталось до плана</th><th class="num">Нужно в рабочий день</th></tr></thead>
@@ -1026,7 +1041,7 @@ async function plansForm(month) {
   const num = v => +String(v || '').replace(/[^\d]/g, '') || 0;
   let dirty = false;
 
-  openModal(`<div class="mhead"><h2>Планы по сделкам</h2><button class="icon" data-close aria-label="Закрыть">✕</button></div>
+  openModal(`<div class="mhead"><h2>Планы продаж</h2><button class="icon" data-close aria-label="Закрыть">✕</button></div>
     <div class="form" id="pBody"><div class="loading">Загрузка…</div></div>`);
   let d;
   try { d = await call('plans', { month }); } catch (e) { closeModal(); toast(e.message, true); return; }
@@ -1036,10 +1051,10 @@ async function plansForm(month) {
       <label>Месяц<select id="pMonth">${opts.map(k => opt(k, d.month, monthLabel(k))).join('')}</select></label>
       <span class="sp"></span><button class="btn sm" id="pPrev" type="button">Как в прошлом месяце</button>
     </div>
-    ${d.rows.length ? `<div class="tbl-wrap"><table class="plan-tbl"><thead><tr><th>Сотрудник</th><th class="num">Сделок, шт</th><th class="num">Объём сделок, ₽</th></tr></thead>
+    ${d.rows.length ? `<div class="tbl-wrap"><table class="plan-tbl"><thead><tr><th>Сотрудник</th><th class="num">Продажи, шт</th><th class="num">Объём сделок, ₽</th></tr></thead>
       <tbody>${d.rows.map((x, i) => `<tr data-i="${i}">
         <td><b>${esc(shortFio(x.fio))}</b>${x.type ? ` <span class="muted">${esc(x.type)}</span>` : ''}</td>
-        <td><input name="deals" inputmode="numeric" autocomplete="off" value="${x.deals ? esc(money(x.deals)) : ''}" aria-label="Сделок, шт"></td>
+        <td><input name="deals" inputmode="numeric" autocomplete="off" value="${x.deals ? esc(money(x.deals)) : ''}" aria-label="Продажи, шт"></td>
         <td><input name="volume" inputmode="numeric" autocomplete="off" value="${x.volume ? esc(money(x.volume)) : ''}" aria-label="Объём сделок, ₽"></td></tr>`).join('')}</tbody>
       <tfoot><tr class="total"><td>Итого</td><td class="num" id="pTD"></td><td class="num" id="pTV"></td></tr></tfoot></table></div>`
     : '<div class="empty">Нет активных сотрудников с ролью «Сотрудник»</div>'}
@@ -1198,16 +1213,16 @@ function reportWorkbook(r) {
 
   sheet('Просроченные шаги', [['ФИО', 'Просроченных следующих активностей']].concat(r.overdue.map(o => [o.fio, o.count])),
     { widths: [36, 22] });
-  sheet('Активности', [['Дата', 'ФИО', 'ФИО НО', 'Тип сотрудника', 'ИНН', 'Клиент', 'Канал', 'Вид', 'Статус',
+  sheet('Активности', [['Дата', 'ФИО', 'ФИО НО', 'Тип сотрудника', 'ИНН', 'Клиент', 'Приоритет', 'Канал', 'Вид', 'Статус',
     'Потенциал, мес', 'Сумма сделки', 'След. активность', 'Комментарий']].concat(r.details.map(a => [
-    xlDate(a.date), a.fio, a.no, a.empType, a.inn, a.short, a.channel, a.type, a.status,
+    xlDate(a.date), a.fio, a.no, a.empType, a.inn, a.short, a.priority || '', a.channel, a.type, a.status,
     a.potential || '', a.dealSum || '', xlDate(a.next), a.comment])),
-    { dates: [0, 11], money: [9, 10], widths: [11, 30, 30, 10, 13, 30, 18, 11, 20, 14, 14, 12, 60], filter: true });
-  sheet('Клиенты', [['ФИО', 'ФИО НО', 'ИНН', 'Клиент', 'Канал', 'Текущий статус', 'Тип статуса', 'Потенциал, мес',
+    { dates: [0, 12], money: [10, 11], widths: [11, 30, 30, 10, 13, 30, 12, 18, 11, 20, 14, 14, 12, 60], filter: true });
+  sheet('Клиенты', [['ФИО', 'ФИО НО', 'ИНН', 'Клиент', 'Приоритет', 'Канал', 'Текущий статус', 'Тип статуса', 'Потенциал, мес',
     'Сумма сделки', 'Последняя активность', 'Следующая активность', 'Активностей за период', 'Последний комментарий']]
-    .concat(r.clients.map(c => [c.fio, c.no, c.inn, c.short, c.channel, c.status, c.kind, c.potential || '',
+    .concat(r.clients.map(c => [c.fio, c.no, c.inn, c.short, c.priority || '', c.channel, c.status, c.kind, c.potential || '',
       c.dealSum || '', xlDate(c.date), xlDate(c.next), c.count, c.comment])),
-    { money: [7, 8], dates: [9, 10], widths: [30, 30, 13, 30, 18, 20, 10, 14, 14, 12, 12, 10, 60], filter: true });
+    { money: [8, 9], dates: [10, 11], widths: [30, 30, 13, 30, 12, 18, 20, 10, 14, 14, 12, 12, 10, 60], filter: true });
   return wb;
 }
 
@@ -1231,6 +1246,13 @@ VIEWS.admin = async () => {
       <div class="muted" style="margin:4px 0 10px">${info.import.at ? 'Последний запуск: ' + new Date(info.import.at).toLocaleString('ru-RU') : ''} · автоматически каждый день в 6:00</div>
       <button class="btn primary" id="impBtn">Обновить обороты сейчас</button>
       <a class="btn ghost" href="${esc(info.sheetUrl)}" target="_blank" rel="noopener">Открыть таблицу</a>
+    </div>
+
+    <h3>Фактические продажи</h3>
+    <div class="card pad">
+      <div>${esc(info.sales.msg)}</div>
+      <div class="muted" style="margin:4px 0 10px">${info.sales.at ? 'Последний запуск: ' + new Date(info.sales.at).toLocaleString('ru-RU') : ''} · автоматически каждый день в 7:00, лист «Продажи»</div>
+      <button class="btn primary" id="salesBtn">Загрузить продажи сейчас</button>
     </div>
 
     <h3>Справочники</h3>
@@ -1263,6 +1285,10 @@ VIEWS.admin = async () => {
   $('#uAdd').addEventListener('click', () => userForm(null));
   $('#impBtn').addEventListener('click', e => busy(e.target, 'Загружаем…', async () => {
     toast(await call('runImport'));
+    refresh();
+  }));
+  $('#salesBtn').addEventListener('click', e => busy(e.target, 'Загружаем…', async () => {
+    toast(await call('runSalesImport'));
     refresh();
   }));
   $('#stAdd').addEventListener('click', () => $('#dSt').insertAdjacentHTML('beforeend', stRow({ name: '', kind: 'open', active: true })));

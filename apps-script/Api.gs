@@ -85,6 +85,7 @@ function routes_() {
     saveDicts: { fn: saveDicts_, need: 'isAdmin' },
     adminInfo: { fn: adminInfo_, need: 'isAdmin' },
     runImport: { fn: function () { return importTurnovers(true); }, need: 'isAdmin' },
+    runSalesImport: { fn: function () { return importSales(); }, need: 'isAdmin' },
     saveSettings: { fn: saveSettings_, need: 'isAdmin' }
   };
 }
@@ -108,6 +109,7 @@ function me_(u) {
 function adminInfo_() {
   return {
     import: importStatus_(),
+    sales: salesStatus_(),
     appUrl: prop_('APP_URL') || '',
     scriptUrl: (function () { try { return ScriptApp.getService().getUrl() || ''; } catch (e) { return ''; } })(),
     dadata: !!prop_('DADATA_KEY'),

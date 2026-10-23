@@ -20,7 +20,8 @@ function rowToAct_(r, rowNum) {
     potSrc: str_(r[COL.POT_SRC - 1]),
     author: str_(r[COL.AUTHOR - 1]),
     created: stamp_(r[COL.CREATED - 1]),
-    updated: stamp_(r[COL.UPDATED - 1])
+    updated: stamp_(r[COL.UPDATED - 1]),
+    priority: str_(r[COL.PRIORITY - 1])
   };
 }
 
@@ -30,6 +31,7 @@ var _acts = null;
 function readActivities_() {
   if (_acts) return _acts;
   var sh = sheet_(APP.SHEET.ACT), last = sh.getLastRow();
+  ensureActColumns_(sh);
   if (last < 2) return (_acts = []);
   var vals = sh.getRange(2, 1, last - 1, NCOL).getValues();
   var out = [], missing = [];
@@ -45,6 +47,18 @@ function readActivities_() {
   });
   if (missing.length) assignIds_(sh, missing, out);
   return (_acts = out);
+}
+
+// Колонки, добавленные после первого запуска (T — приоритет клиента): заголовок и выпадающий список.
+// Делается один раз, дальше проверка — одно чтение свойства.
+function ensureActColumns_(sh) {
+  if (prop_('ACT_NCOL') === String(NCOL)) return;
+  if (sh.getMaxColumns() < NCOL) sh.insertColumnsAfter(sh.getMaxColumns(), NCOL - sh.getMaxColumns());
+  sh.getRange(1, 1, 1, NCOL).setValues([ACT_HEADERS]);
+  sh.getRange(1, COL.PRIORITY).setFontWeight('bold').setBackground('#D9EAD3');
+  var rule = SpreadsheetApp.newDataValidation().requireValueInList(PRIORITIES, true).setAllowInvalid(false).build();
+  sh.getRange(2, COL.PRIORITY, Math.max(sh.getMaxRows() - 1, 1), 1).setDataValidation(rule);
+  setProp_('ACT_NCOL', NCOL);
 }
 
 function assignIds_(sh, missing, acts) {
@@ -136,6 +150,9 @@ function validateActivity_(u, input) {
   v.inn = normInn_(input.inn);
   if (!isInn_(v.inn)) throw new Error('ИНН должен содержать 10 цифр (юрлицо) или 12 цифр (ИП)');
 
+  v.priority = str_(input.priority);
+  if (PRIORITIES.indexOf(v.priority) < 0) throw new Error('Укажите приоритет клиента: ключевой или неключевой');
+
   v.channel = str_(input.channel);
   if (d.channels.indexOf(v.channel) < 0) throw new Error('Выберите канал поступления');
 
@@ -197,6 +214,7 @@ function saveActivity_(u, input) {
   var v = validateActivity_(u, input);
   var saved = withLock_(function () {
     var sh = sheet_(APP.SHEET.ACT), now = new Date();
+    ensureActColumns_(sh);
     var rowNum, id, author, created;
     if (input.id) {
       rowNum = findActRow_(sh, input.id);
@@ -221,7 +239,7 @@ function saveActivity_(u, input) {
     var row = [
       safeText_(v.fio), safeText_(v.no), v.inn, safeText_(v.short), safeText_(v.full), v.channel,
       v.potential, v.status, v.date, v.type, v.next || '', safeText_(v.comment), v.dealSum,
-      id, v.potSrc, author, created, now, ''
+      id, v.potSrc, author, created, now, '', v.priority
     ];
     sh.getRange(rowNum, COL.INN).setNumberFormat('@');
     sh.getRange(rowNum, 1, 1, NCOL).setValues([row]);
@@ -238,9 +256,20 @@ function retiredStatusMsg_(status) {
   return 'Статус «' + status + '» больше не используется — выберите другой';
 }
 
+// Подсказка приоритета: из последней активности по клиенту, иначе из файла продаж
+// («Ключевой» там — ключевой, любой другой приоритет — неключевой).
+function priorityFor_(inn, acts) {
+  var last = acts.filter(function (a) { return a.priority; }).sort(byDateDesc_)[0];
+  if (last) return { value: last.priority, source: 'по последней активности' };
+  var sale = readSales_().filter(function (x) { return x.inn === inn && x.priority; })[0];
+  if (sale) return { value: sale.priority === 'Ключевой' ? 'Ключевой' : 'Неключевой', source: 'по файлу продаж: ' + sale.priority };
+  return null;
+}
+
 function deleteActivity_(u, args) {
   withLock_(function () {
     var sh = sheet_(APP.SHEET.ACT);
+    ensureActColumns_(sh);
     var rowNum = findActRow_(sh, args.id);
     if (!rowNum) throw new Error('Активность не найдена');
     var cur = rowToAct_(sh.getRange(rowNum, 1, 1, NCOL).getValues()[0], rowNum);
@@ -264,6 +293,7 @@ function lookupInn_(u, args) {
     .map(function (a) { return pubAct_(u, a); });
   return {
     inn: inn,
+    priority: priorityFor_(inn, all),
     company: findCompany_(inn),
     potential: t && t.ps ? Math.round(t.ps) : null,
     ps: t && t.ps ? { turnover: Math.round(t.ps), banks: t.banks, sbp: t.sbp, ecom: t.ecom, file: t.psFile } : null,

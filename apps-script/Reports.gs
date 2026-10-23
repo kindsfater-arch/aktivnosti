@@ -120,7 +120,7 @@ function buildReport_(u, args) {
     .sort(function (x, y) { return (y.potential || 0) - (x.potential || 0); })
     .map(function (a) {
       return {
-        fio: a.fio, no: a.no, inn: a.inn, short: a.short, channel: a.channel, status: a.status,
+        fio: a.fio, no: a.no, inn: a.inn, short: a.short, priority: a.priority, channel: a.channel, status: a.status,
         kind: KIND_LABEL[kinds[a.status]] || '', potential: a.potential, dealSum: a.dealSum,
         date: a.date, next: a.next, count: perClient[a.fio + '|' + a.inn], comment: a.comment
       };
@@ -153,7 +153,7 @@ function buildReport_(u, args) {
     pipeline: pipeline,
     details: list.sort(byDateDesc_).map(function (a) {
       return {
-        date: a.date, fio: a.fio, no: a.no, empType: a.empType, inn: a.inn, short: a.short, channel: a.channel,
+        date: a.date, fio: a.fio, no: a.no, empType: a.empType, inn: a.inn, short: a.short, priority: a.priority, channel: a.channel,
         type: a.type, status: a.status, potential: a.potential, dealSum: a.dealSum, next: a.next, comment: a.comment
       };
     })
