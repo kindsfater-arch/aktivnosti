@@ -95,6 +95,8 @@ th { font-size: 12px; color: var(--muted); font-weight: 600; background: var(--s
 tbody tr.click { cursor: pointer; }
 tbody tr.click:hover { background: var(--surface-2); }
 tr.total td { font-weight: 700; }
+tr.sum td { font-weight: 400; font-size: 13px; vertical-align: top; background: var(--surface-2); line-height: 1.5; }
+tr.sum td b { font-weight: 700; }
 td.cm { max-width: 340px; }
 /* Карточки вместо таблицы на телефоне — только для строк самой таблицы, не для вложенных. */
 @media (max-width: 760px) {
@@ -485,7 +487,7 @@ async function loadActs() {
   box.innerHTML = `<table class="resp"><thead><tr>
       <th>Дата</th>${showFio ? '<th>Сотрудник</th>' : ''}<th>Клиент</th><th>Вид</th><th>Статус</th>
       <th class="num">Потенциал</th><th class="num">Сделка</th><th>След.</th><th>Комментарий</th></tr></thead>
-    <tbody>${d.rows.map(r => `<tr class="click" data-id="${esc(r.id)}">
+    <tbody>${actsSumRow(d.sum, showFio)}${d.rows.map(r => `<tr class="click" data-id="${esc(r.id)}">
       <td data-l="Дата">${ruD(r.date)}</td>
       ${showFio ? `<td data-l="Сотрудник">${esc(r.fio)}</td>` : ''}
       <td data-l="Клиент"><b>${esc(r.short || '—')}</b><br><span class="muted">${esc(r.inn)}</span></td>
@@ -497,6 +499,23 @@ async function loadActs() {
       <td data-l="Комментарий" class="cm">${esc(r.comment)}</td></tr>`).join('')}</tbody></table>
     ${d.total > d.rows.length ? `<div class="pad muted">Показаны первые ${d.rows.length} из ${d.total}. Уточните фильтр.</div>` : ''}`;
   $$('tr[data-id]', box).forEach(tr => tr.addEventListener('click', () => openForm(S.items[tr.dataset.id])));
+}
+
+// Итоги за выбранный период и фильтры: по всем отобранным активностям, а не только по показанным строкам.
+function actsSumRow(s, showFio) {
+  const list = (o, fmt = esc) => Object.keys(o).sort((a, b) => o[b] - o[a])
+    .map(k => `<div>${fmt(k)} <b>${o[k]}</b></div>`).join('');
+  const td = (label, html, cls = '') => `<td data-l="${label}"${cls ? ` class="${cls}"` : ''}><div>${html}</div></td>`;
+  return `<tr class="total sum">
+    ${td('Итого', `<div>Активностей <b>${money(s.count)}</b></div><div class="muted">дней: ${s.days}</div>`)}
+    ${showFio ? td('Сотрудников', `<b>${s.fios}</b>`) : ''}
+    ${td('Клиентов', `<div><b>${money(s.clients)}</b></div><div class="muted">ключевых: ${s.key}</div>`)}
+    ${td('Вид', list(s.byType))}
+    ${td('Статус', list(s.byStatus, chip))}
+    ${td('Потенциал', `<b title="По клиентам: у каждого — из последней активности за период">${money(s.potential)}</b>`, 'num')}
+    ${td('Сделки', `<div><b>${money(s.dealSum)}</b></div><div class="muted">сделок: ${s.deals}</div>`, 'num')}
+    ${td('След. шаг', `<div>назначено <b>${s.next}</b></div><div class="muted">впереди: ${s.nextAhead}</div>`)}
+    ${td('Канал', list(s.byChannel))}</tr>`;
 }
 
 /* ---------- Форма активности ---------- */

@@ -129,8 +129,37 @@ function listActivities_(u, args) {
   list.sort(byDateDesc_);
   return {
     total: list.length,
+    sum: actsSummary_(list),
     rows: list.slice(0, 1000).map(function (a) { return pubAct_(u, a); })
   };
+}
+
+// Итоги по всем отобранным активностям (не только по показанным строкам) — по каждому полю, кроме комментария.
+// Потенциал — по клиентам: у каждого ИНН берётся значение из последней активности за период (список уже отсортирован).
+function actsSummary_(list) {
+  var today = ymd_(today_());
+  var s = { count: list.length, days: 0, fios: 0, clients: 0, key: 0, byType: {}, byStatus: {}, byChannel: {},
+    potential: 0, deals: 0, dealSum: 0, next: 0, nextAhead: 0 };
+  var days = {}, fios = {}, inns = {};
+  var inc = function (o, k) { o[k || '—'] = (o[k || '—'] || 0) + 1; };
+  list.forEach(function (a) {
+    days[a.date] = 1;
+    fios[a.fio] = 1;
+    if (!inns[a.inn]) {
+      inns[a.inn] = 1;
+      s.potential += a.potential || 0;
+      if (a.priority === PRIORITIES[0]) s.key++;
+    }
+    inc(s.byType, a.type);
+    inc(s.byStatus, a.status);
+    inc(s.byChannel, a.channel);
+    if (a.dealSum > 0) { s.deals++; s.dealSum += a.dealSum; }
+    if (a.next) { s.next++; if (a.next >= today) s.nextAhead++; }
+  });
+  s.days = Object.keys(days).length;
+  s.fios = Object.keys(fios).length;
+  s.clients = Object.keys(inns).length;
+  return s;
 }
 
 function findActRow_(sh, id) {
