@@ -95,8 +95,11 @@ th { font-size: 12px; color: var(--muted); font-weight: 600; background: var(--s
 tbody tr.click { cursor: pointer; }
 tbody tr.click:hover { background: var(--surface-2); }
 tr.total td { font-weight: 700; }
-tr.sum td { font-weight: 400; font-size: 13px; vertical-align: top; background: var(--surface-2); line-height: 1.5; }
-tr.sum td b { font-weight: 700; }
+.sum-list { list-style: none; margin: 6px 0 0; padding: 0; font-size: 14px; }
+.sum-list li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 2px 0; }
+.kpi .sum-list b { display: inline; font-size: 14px; }
+.sum-list .chip { white-space: normal; }
+@media (max-width: 560px) { .kpis.sum-nums { grid-template-columns: 1fr 1fr; } .kpis.sum-nums .kpi b { font-size: 18px; } }
 td.cm { max-width: 340px; }
 /* Карточки вместо таблицы на телефоне — только для строк самой таблицы, не для вложенных. */
 @media (max-width: 760px) {
@@ -116,7 +119,7 @@ td.cm { max-width: 340px; }
 .kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin-bottom: 14px; }
 .kpi { padding: 12px 14px; }
 .kpi b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
-.kpi span { font-size: 13px; color: var(--muted); }
+.kpi > span { font-size: 13px; color: var(--muted); }
 .seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 3px; background: var(--surface-2); }
 .seg label { cursor: pointer; }
 .seg input { position: absolute; opacity: 0; pointer-events: none; width: 0; min-height: 0; }
@@ -462,6 +465,7 @@ VIEWS.acts = async () => {
       <span class="sp"></span>
       <button class="btn primary" id="addBtn">+ Активность</button>
     </div>
+    <div id="actSum"></div>
     <div id="actList" class="loading">Загрузка…</div>`;
   bindFioFilter();
   $('#addBtn').addEventListener('click', () => openForm({}));
@@ -482,12 +486,13 @@ async function loadActs() {
   S.items = {};
   d.rows.forEach(r => { S.items[r.id] = r; });
   const showFio = S.fios.length > 1;
+  $('#actSum').innerHTML = d.rows.length ? actsSummary(d.sum, showFio) : '';
   if (!d.rows.length) { box.className = 'card pad empty'; box.textContent = 'Активностей за период нет'; return; }
   box.className = 'card tbl-wrap';
   box.innerHTML = `<table class="resp"><thead><tr>
       <th>Дата</th>${showFio ? '<th>Сотрудник</th>' : ''}<th>Клиент</th><th>Вид</th><th>Статус</th>
       <th class="num">Потенциал</th><th class="num">Сделка</th><th>След.</th><th>Комментарий</th></tr></thead>
-    <tbody>${actsSumRow(d.sum, showFio)}${d.rows.map(r => `<tr class="click" data-id="${esc(r.id)}">
+    <tbody>${d.rows.map(r => `<tr class="click" data-id="${esc(r.id)}">
       <td data-l="Дата">${ruD(r.date)}</td>
       ${showFio ? `<td data-l="Сотрудник">${esc(r.fio)}</td>` : ''}
       <td data-l="Клиент"><b>${esc(r.short || '—')}</b><br><span class="muted">${esc(r.inn)}</span></td>
@@ -502,20 +507,23 @@ async function loadActs() {
 }
 
 // Итоги за выбранный период и фильтры: по всем отобранным активностям, а не только по показанным строкам.
-function actsSumRow(s, showFio) {
-  const list = (o, fmt = esc) => Object.keys(o).sort((a, b) => o[b] - o[a])
-    .map(k => `<div>${fmt(k)} <b>${o[k]}</b></div>`).join('');
-  const td = (label, html, cls = '') => `<td data-l="${label}"${cls ? ` class="${cls}"` : ''}><div>${html}</div></td>`;
-  return `<tr class="total sum">
-    ${td('Итого', `<div>Активностей <b>${money(s.count)}</b></div><div class="muted">дней: ${s.days}</div>`)}
-    ${showFio ? td('Сотрудников', `<b>${s.fios}</b>`) : ''}
-    ${td('Клиентов', `<div><b>${money(s.clients)}</b></div><div class="muted">ключевых: ${s.key}</div>`)}
-    ${td('Вид', list(s.byType))}
-    ${td('Статус', list(s.byStatus, chip))}
-    ${td('Потенциал', `<b title="По клиентам: у каждого — из последней активности за период">${money(s.potential)}</b>`, 'num')}
-    ${td('Сделки', `<div><b>${money(s.dealSum)}</b></div><div class="muted">сделок: ${s.deals}</div>`, 'num')}
-    ${td('След. шаг', `<div>назначено <b>${s.next}</b></div><div class="muted">впереди: ${s.nextAhead}</div>`)}
-    ${td('Канал', list(s.byChannel))}</tr>`;
+function actsSummary(s, showFio) {
+  const kpi = (v, l, sub) => `<div class="card kpi"><b>${v}</b><span>${l}</span>${sub ? `<small>${sub}</small>` : ''}</div>`;
+  const list = (title, o, fmt = esc) => `<div class="card kpi"><span>${title}</span><ul class="sum-list">${Object.keys(o)
+    .sort((a, b) => o[b] - o[a]).map(k => `<li>${fmt(k)}<b>${money(o[k])}</b></li>`).join('')}</ul></div>`;
+  return `<div class="kpis sum-nums">
+      ${kpi(money(s.count), 'активностей', 'дней с активностями: ' + s.days)}
+      ${showFio ? kpi(s.fios, 'сотрудников') : ''}
+      ${kpi(money(s.clients), 'клиентов', 'ключевых: ' + s.key)}
+      ${kpi(rub(s.potential), 'потенциал, мес', 'по клиентам, на последнюю активность')}
+      ${kpi(money(s.deals), 'сделок', s.dealSum ? 'на ' + rub(s.dealSum) : '')}
+      ${kpi(money(s.next), 'след. шагов назначено', 'ещё впереди: ' + s.nextAhead)}
+    </div>
+    <div class="kpis">
+      ${list('По видам', s.byType)}
+      ${list('По статусам', s.byStatus, chip)}
+      ${list('По каналам', s.byChannel)}
+    </div>`;
 }
 
 /* ---------- Форма активности ---------- */
