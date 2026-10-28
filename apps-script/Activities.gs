@@ -318,7 +318,8 @@ function lookupInn_(u, args) {
   var inWork = latestByClient_(all).map(function (a) {
     return { fio: a.fio, status: a.status, date: a.date, next: a.next };
   });
-  var history = all.filter(function (a) { return canSee_(u, a); }).sort(byDateDesc_).slice(0, 20)
+  // Вся история по клиенту, которую сотруднику можно видеть, — от новых к старым, с полными комментариями.
+  var history = all.filter(function (a) { return canSee_(u, a); }).sort(byDateDesc_)
     .map(function (a) { return pubAct_(u, a); });
   return {
     inn: inn,

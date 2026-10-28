@@ -148,8 +148,11 @@ td.cm { max-width: 340px; }
 .note.warn { background: var(--warn-soft); color: var(--warn); }
 .note.info { background: var(--open-soft); color: var(--open); }
 details summary { cursor: pointer; color: var(--muted); }
-.hist { margin: 6px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
-.hist li { border-left: 3px solid var(--line); padding-left: 8px; }
+.hist { margin: 8px 0 0; padding: 0 4px 0 0; list-style: none; display: flex; flex-direction: column; gap: 10px; max-height: 50vh; overflow-y: auto; }
+.hist li { border-left: 3px solid var(--line); padding-left: 10px; font-size: 13px; }
+.hist li.cur { border-left-color: var(--accent); }
+#histBtn { align-self: flex-start; }
+.hist .hc { font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 2px; }
 
 #toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 80; background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: calc(100% - 32px); }
 #toast.on { opacity: 1; }
@@ -616,7 +619,8 @@ function openForm(pre, errMsg) {
         f.potential.value = r.potential;
         $('#potHint').textContent = 'по данным PS (оборот у конкурентов)';
       }
-      card.innerHTML = innCard(r, f.fio ? f.fio.value : a.fio);
+      card.innerHTML = innCard(r, f.fio ? f.fio.value : a.fio, a.id);
+      bindHistory(card);
     } catch (e) {
       card.innerHTML = `<div class="note warn">${esc(e.message)}</div>`;
     }
@@ -676,7 +680,7 @@ function openForm(pre, errMsg) {
   });
 }
 
-function innCard(r, fio) {
+function innCard(r, fio, curId) {
   const c = r.company;
   const others = r.inWork.filter(w => w.fio !== fio);
   return `
@@ -692,8 +696,27 @@ function innCard(r, fio) {
         ${r.sber ? `<span class="muted">${esc(r.sber.file)}</span>` : ''}</div>
     </div>
     ${others.length ? `<div class="note warn">Клиент уже в работе: ${others.map(w => `${esc(w.fio)} — ${esc(w.status)} (${ruD(w.date)})`).join('; ')}</div>` : ''}
-    ${r.history.length ? `<details><summary>История по клиенту (${r.history.length})</summary><ul class="hist">${r.history.map(h =>
-      `<li><b>${ruD(h.date)}</b> · ${esc(h.type)} · ${esc(h.status)}${S.fios.length > 1 ? ' · ' + esc(h.fio) : ''}<br>${esc(h.comment)}</li>`).join('')}</ul></details>` : ''}`;
+    ${r.history.length ? `<button type="button" class="btn sm" id="histBtn" aria-expanded="false">Все активности по клиенту (${r.history.length})</button>
+      <ul class="hist hidden" id="histList">${r.history.map(h => histItem(h, h.id === curId)).join('')}</ul>`
+      : '<span class="muted">Активностей по клиенту ещё не было</span>'}`;
+}
+
+function histItem(h, cur) {
+  const meta = [esc(h.type), esc(h.channel), S.fios.length > 1 ? esc(h.fio) : '',
+    h.dealSum ? 'сделка ' + rub(h.dealSum) : '', h.next ? 'след. шаг ' + ruD(h.next) : ''].filter(Boolean).join(' · ');
+  return `<li${cur ? ' class="cur"' : ''}><div><b>${ruD(h.date)}</b> ${chip(h.status)}${cur ? ' <span class="muted">— эта запись</span>' : ''}</div>
+    <div class="muted">${meta}</div><div class="hc">${esc(h.comment) || '<span class="muted">без комментария</span>'}</div></li>`;
+}
+
+function bindHistory(card) {
+  const btn = $('#histBtn', card), list = $('#histList', card);
+  if (!btn) return;
+  const label = btn.textContent;
+  btn.addEventListener('click', () => {
+    const open = list.classList.toggle('hidden') === false;
+    btn.setAttribute('aria-expanded', open);
+    btn.textContent = open ? 'Скрыть активности по клиенту' : label;
+  });
 }
 
 /* ---------- Сделки ---------- */
