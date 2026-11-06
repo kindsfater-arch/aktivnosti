@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta name="referrer" content="no-referrer">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Активности</title>
+<style>
+:root {
+  --bg: #f4f6f5; --surface: #ffffff; --surface-2: #f8faf9; --text: #18221d; --muted: #63716a; --line: #dfe6e2;
+  --accent: #1a7f37; --accent-ink: #ffffff; --accent-soft: #e5f2e9;
+  --open: #1f5fbf; --open-soft: #e7effb; --lost: #8a3b32; --lost-soft: #f8e9e7; --warn: #9a5b00; --warn-soft: #fdf1dc;
+  --danger: #c5221f; --shadow: 0 1px 2px rgba(16, 24, 20, .06), 0 4px 16px rgba(16, 24, 20, .06);
+  --radius: 12px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1412; --surface: #171d1a; --surface-2: #1c2420; --text: #e6ece8; --muted: #9aa8a0; --line: #2a3430;
+    --accent: #3fb75e; --accent-ink: #08130c; --accent-soft: #183522;
+    --open: #7fb0ff; --open-soft: #172742; --lost: #f0a39a; --lost-soft: #3a1d1a; --warn: #f2c063; --warn-soft: #3a2c10;
+    --danger: #ff7b72; --shadow: 0 1px 2px rgba(0, 0, 0, .4);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1412; --surface: #171d1a; --surface-2: #1c2420; --text: #e6ece8; --muted: #9aa8a0; --line: #2a3430;
+  --accent: #3fb75e; --accent-ink: #08130c; --accent-soft: #183522;
+  --open: #7fb0ff; --open-soft: #172742; --lost: #f0a39a; --lost-soft: #3a1d1a; --warn: #f2c063; --warn-soft: #3a2c10;
+  --danger: #ff7b72; --shadow: 0 1px 2px rgba(0, 0, 0, .4);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--text); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+button, input, select, textarea { font: inherit; color: inherit; }
+.hidden { display: none !important; }
+.muted { color: var(--muted); }
+.num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+
+header.top { position: sticky; top: 0; z-index: 20; background: var(--surface); border-bottom: 1px solid var(--line); }
+.top-in { max-width: 1240px; margin: 0 auto; padding: 10px 16px 0; display: flex; align-items: center; gap: 12px; }
+.brand { font-weight: 700; font-size: 17px; letter-spacing: -.01em; display: flex; align-items: center; gap: 8px; }
+.brand i { width: 10px; height: 10px; border-radius: 3px; background: var(--accent); display: inline-block; }
+.who { margin-left: auto; text-align: right; font-size: 13px; line-height: 1.2; }
+.who small { color: var(--muted); display: block; }
+nav.tabs { max-width: 1240px; margin: 0 auto; padding: 0 12px; display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+nav.tabs::-webkit-scrollbar { display: none; }
+nav.tabs button { border: 0; background: none; padding: 10px 12px 11px; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; font-weight: 500; }
+nav.tabs button.on { color: var(--text); border-bottom-color: var(--accent); }
+main { max-width: 1240px; margin: 0 auto; padding: 16px; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.pad { padding: 14px 16px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin-bottom: 14px; }
+.toolbar .sp { flex: 1; }
+.toolbar > label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+.btn { border: 1px solid var(--line); background: var(--surface); padding: 8px 14px; border-radius: 9px; cursor: pointer; font-weight: 500; white-space: nowrap; min-height: 38px; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.ghost { background: transparent; }
+.btn.danger { color: var(--danger); }
+.btn.sm { padding: 4px 10px; min-height: 30px; font-size: 13px; }
+.btn:disabled { opacity: .55; cursor: progress; }
+input, select, textarea { background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; min-height: 38px; width: 100%; }
+textarea { resize: vertical; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+.toolbar > label input, .toolbar > label select { width: auto; min-width: 140px; }
+.icon { border: 0; background: none; font-size: 18px; cursor: pointer; color: var(--muted); padding: 4px 8px; }
+
+.chip { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.k-open { background: var(--open-soft); color: var(--open); }
+.k-deal { background: var(--accent-soft); color: var(--accent); }
+.k-lost { background: var(--lost-soft); color: var(--lost); }
+.badge { display: inline-block; min-width: 22px; padding: 0 7px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); font-size: 12px; text-align: center; margin-left: 6px; }
+.badge.green { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+.badge.red { background: var(--lost-soft); color: var(--lost); border-color: transparent; }
+
+h2 { font-size: 19px; margin: 0; }
+h3 { font-size: 15px; margin: 22px 0 10px; display: flex; align-items: center; }
+h3:first-child { margin-top: 4px; }
+
+.items { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+.item { padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.item .r1 { display: flex; justify-content: space-between; gap: 8px; align-items: start; }
+.item .name { font-weight: 600; }
+.item .meta { font-size: 13px; color: var(--muted); }
+.item .cm { font-size: 13px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.item .acts { display: flex; gap: 6px; margin-top: 2px; }
+.empty { color: var(--muted); padding: 10px 2px; font-size: 14px; }
+
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { font-size: 12px; color: var(--muted); font-weight: 600; background: var(--surface-2); position: sticky; top: 0; }
+tbody tr.click { cursor: pointer; }
+tbody tr.click:hover { background: var(--surface-2); }
+tr.total td { font-weight: 700; }
+.sum-list { list-style: none; margin: 6px 0 0; padding: 0; font-size: 14px; }
+.sum-list li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 2px 0; }
+.kpi .sum-list b { display: inline; font-size: 14px; }
+.sum-list .chip { white-space: normal; }
+@media (max-width: 560px) { .kpis.sum-nums { grid-template-columns: 1fr 1fr; } .kpis.sum-nums .kpi b { font-size: 18px; } }
+td.cm { max-width: 340px; }
+/* Карточки вместо таблицы на телефоне — только для строк самой таблицы, не для вложенных. */
+@media (max-width: 760px) {
+  table.resp > thead { display: none; }
+  table.resp > tbody > tr { display: block; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  table.resp > tbody > tr > td { display: flex; justify-content: space-between; gap: 12px; border: 0; padding: 3px 0; text-align: right; }
+  table.resp > tbody > tr > td::before { content: attr(data-l); color: var(--muted); text-align: left; font-size: 13px; flex: none; }
+  table.resp > tbody > tr > td.cm { max-width: none; }
+  table.resp > tbody > tr.detail > td { display: block; text-align: left; }
+  table.resp > tbody > tr.detail > td::before { content: none; }
+  .toolbar > label input, .toolbar > label select { min-width: 0; width: 100%; }
+  .toolbar > label { flex: 1 1 140px; }
+  .who { max-width: 55%; }
+  .who, .who small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.kpi { padding: 12px 14px; }
+.kpi b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.kpi > span { font-size: 13px; color: var(--muted); }
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 3px; background: var(--surface-2); }
+.seg label { cursor: pointer; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; width: 0; min-height: 0; }
+.seg span { display: block; padding: 6px 12px; border-radius: 7px; font-size: 14px; color: var(--muted); }
+.seg input:checked + span { background: var(--surface); color: var(--text); box-shadow: var(--shadow); font-weight: 600; }
+.seg input:focus-visible + span { outline: 2px solid var(--accent); }
+.bar { height: 8px; border-radius: 4px; background: var(--accent); min-width: 2px; }
+
+.modal { position: fixed; inset: 0; z-index: 50; background: rgba(10, 16, 13, .45); display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 24px 12px; }
+.sheet { background: var(--surface); border-radius: 16px; width: 100%; max-width: 680px; box-shadow: 0 20px 60px rgba(0, 0, 0, .25); }
+.mhead { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px 8px; }
+.form { padding: 4px 18px 18px; display: flex; flex-direction: column; gap: 12px; }
+.fld { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.fld > span { color: var(--muted); font-weight: 500; }
+.fld small { color: var(--muted); font-size: 12px; }
+.static { padding: 8px 0; font-size: 15px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 560px) { .grid2 { grid-template-columns: 1fr; } .modal { padding: 0; } .sheet { border-radius: 0; min-height: 100%; } }
+.mfoot { display: flex; gap: 8px; align-items: center; padding-top: 6px; }
+.mfoot .sp { flex: 1; }
+.ferr { color: var(--danger); font-size: 14px; min-height: 0; }
+.inncard { border: 1px solid var(--line); background: var(--surface-2); border-radius: 10px; padding: 10px 12px; font-size: 13px; display: flex; flex-direction: column; gap: 8px; }
+.inncard .g { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.inncard b.big { font-size: 17px; display: block; font-variant-numeric: tabular-nums; }
+.note { border-radius: 8px; padding: 7px 10px; font-size: 13px; }
+.note.warn { background: var(--warn-soft); color: var(--warn); }
+.note.info { background: var(--open-soft); color: var(--open); }
+details summary { cursor: pointer; color: var(--muted); }
+.hist { margin: 8px 0 0; padding: 0 4px 0 0; list-style: none; display: flex; flex-direction: column; gap: 10px; max-height: 50vh; overflow-y: auto; }
+.hist li { border-left: 3px solid var(--line); padding-left: 10px; font-size: 13px; }
+.hist li.cur { border-left-color: var(--accent); }
+#histBtn { align-self: flex-start; }
+.hist .hc { font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 2px; }
+
+#toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 80; background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: calc(100% - 32px); }
+#toast.on { opacity: 1; }
+#toast.err { background: var(--danger); color: #fff; }
+.loading { color: var(--muted); padding: 30px 4px; }
+.fatal { max-width: 520px; margin: 12vh auto; padding: 24px; text-align: center; }
+.foot { max-width: 1240px; margin: 0 auto; padding: 4px 16px 24px; font-size: 12px; color: var(--muted); }
+.chk { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+.chk input { width: auto; min-height: 0; }
+.checks { max-height: 180px; overflow-y: auto; border: 1px solid var(--line); border-radius: 9px; padding: 6px 10px; display: flex; flex-direction: column; gap: 4px; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.st-row { display: grid; grid-template-columns: 1fr 110px auto 34px; gap: 6px; margin-bottom: 6px; align-items: center; }
+
+/* Графики отчёта. Виды активности — категориальные слоты 1–3; результаты — сделка / открытые статусы / отказ. */
+:root {
+  --c-t1: #2a78d6; --c-t2: #eb6834; --c-t3: #1baf7a;
+  --c-deal: #0ca30c; --c-open1: #6250d6; --c-open2: #eda100; --c-lost: #d03b3b; --c-other: #8a8984;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --c-t1: #3987e5; --c-t2: #d95926; --c-t3: #199e70; --c-open1: #9085e9; --c-open2: #c98500; }
+}
+:root[data-theme="dark"] { --c-t1: #3987e5; --c-t2: #d95926; --c-t3: #199e70; --c-open1: #9085e9; --c-open2: #c98500; }
+.stack { display: flex; gap: 2px; height: 12px; min-width: 4px; }
+.stack i { display: block; min-width: 3px; height: 100%; }
+.stack i:first-child { border-radius: 4px 0 0 4px; }
+.stack i:last-child { border-radius: 0 4px 4px 0; }
+.stack i:only-child { border-radius: 4px; }
+.barcell { display: flex; align-items: center; gap: 8px; min-width: 150px; }
+.barcell .track { flex: 1; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); margin: 4px 2px 10px; }
+.legend b { color: var(--text); font-weight: 600; margin-right: 2px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.kpi small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+tr.detail > td { background: var(--surface-2); }
+.mini { width: auto; font-size: 13px; }
+.mini th, .mini td { padding: 5px 10px; }
+#tip { position: fixed; z-index: 90; pointer-events: none; background: var(--text); color: var(--bg); font-size: 13px; padding: 6px 9px; border-radius: 7px; white-space: pre-line; opacity: 0; transition: opacity .1s; }
+#tip.on { opacity: 1; }
+@media (max-width: 760px) { .barcell { min-width: 0; width: 60%; } }
+/* Выполнение плана и таблица видов и статусов с закреплённой колонкой менеджера. */
+.pct { font-size: 12px; font-weight: 600; color: var(--warn); }
+.pct.ok { color: var(--accent); }
+.pct.low { color: var(--danger); }
+h3.plan-h { gap: 10px; flex-wrap: wrap; }
+h3.plan-h select { width: auto; min-height: 32px; padding: 4px 8px; font-size: 14px; font-weight: 500; }
+tr.who-row td { background: var(--surface-2); font-weight: 600; padding-top: 12px; }
+tr.who-row.team td { background: var(--accent-soft); }
+tr.who-row.me td { box-shadow: inset 3px 0 0 var(--accent); }
+table.plan-v tr.mrow td:first-child { color: var(--muted); padding-left: 18px; }
+.pv-cards { display: none; }
+.pv-card { padding: 10px 14px; }
+.pv-card.team { background: var(--accent-soft); }
+.pv-card.me { box-shadow: inset 3px 0 0 var(--accent), var(--shadow); }
+.pv-who { font-weight: 600; margin-bottom: 4px; }
+.pv-m { display: grid; grid-template-columns: auto 1fr; gap: 0 10px; padding: 4px 0; }
+.pv-l { color: var(--muted); font-size: 13px; }
+.pv-v { text-align: right; font-variant-numeric: tabular-nums; }
+.pv-m small { grid-column: 1 / -1; color: var(--muted); font-size: 12px; text-align: right; }
+.note-line { font-size: 13px; margin: -4px 2px 10px; }
+th.grp { text-align: center; border-left: 1px solid var(--line); }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; background: currentColor; }
+.dot.k-open { color: var(--open); } .dot.k-deal { color: var(--accent); } .dot.k-lost { color: var(--lost); }
+table.wide td { white-space: nowrap; }
+table.wide thead tr + tr th { white-space: normal; min-width: 64px; max-width: 110px; line-height: 1.25; vertical-align: bottom; }
+.plan-tbl td { vertical-align: middle; }
+.plan-tbl input { text-align: right; min-width: 90px; }
+@media (min-width: 761px) {
+  table.wide td:first-child, table.wide thead tr:first-child th:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); }
+  table.wide thead tr:first-child th:first-child { background: var(--surface-2); z-index: 2; }
+}
+@media (max-width: 760px) {
+  table.resp > tbody > tr > td.z { display: none; }
+  .pv-table { display: none; }
+  .pv-cards { display: grid; gap: 8px; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div class="brand"><i></i>Активности</div>
+    <div class="who" id="who"></div>
+  </div>
+  <nav class="tabs" id="tabs"></nav>
+</header>
+<main id="view"><div class="loading">Загрузка…</div></main>
+<div class="foot" id="foot"></div>
+<div class="modal hidden" id="modal"><div class="sheet" id="sheet"></div></div>
+<div id="toast"></div>
+<div id="tip" role="tooltip"></div>
+
+<script>
+const BOOT = /*BOOT*/<?!= bootJson ?>/*END*/;
+
+const TOKEN = (() => {
+  let t = BOOT.token || new URLSearchParams(location.search).get('k') || '';
+  try {
+    if (t) localStorage.setItem('akt_token', t);
+    else t = localStorage.getItem('akt_token') || '';
+  } catch (e) { /* хранилище недоступно — работаем по ссылке */ }
+  return t;
+})();
+
+try { const url = new URL(location.href); url.searchParams.delete('k'); history.replaceState(null, '', url.pathname + url.search + url.hash); } catch (e) { /* Apps Script iframe may restrict history */ }
+const PEOPLE = Object.create(null);
+function responseData(r) { Object.assign(PEOPLE, r.people || {}); return r.data; }
+
+function call(fn, args) {
+  args = args || {};
+  if (BOOT.mode === 'gas') {
+    return new Promise((resolve, reject) => {
+      google.script.run
+        .withSuccessHandler(r => (r && r.ok) ? resolve(responseData(r)) : reject(new Error(r ? r.error : 'Пустой ответ сервера')))
+        .withFailureHandler(e => reject(e instanceof Error ? e : new Error(String(e))))
+        .api(TOKEN, fn, args);
+    });
+  }
+  return callWeb(fn, args);
+}
+
+// Долгие операции: обновление оборотов идёт 1–2 минуты, отчёт за всё время — до минуты.
+const SLOW_CALLS = { runImport: 300000, reportData: 120000, confirmedSalesReport: 120000, previewConfirmedSales: 120000, importConfirmedSales: 120000 };
+
+// Google иногда отвечает на POST лишним редиректом и вместо JSON приходит HTML.
+// Повторяем с тем же rid: сервер вернёт сохранённый результат и не выполнит действие дважды.
+async function callWeb(fn, args) {
+  const rid = Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  const body = JSON.stringify({ k: TOKEN, fn, args, rid });
+  for (let attempt = 0; attempt < 4; attempt++) {
+    if (attempt) await new Promise(r => setTimeout(r, 400 * attempt));
+    // Иногда Google не отдаёт ответ вовсе — без тайм-аута интерфейс ждал бы бесконечно.
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), SLOW_CALLS[fn] || 20000);
+    let text;
+    try {
+      const resp = await fetch(BOOT.apiUrl, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body, signal: ctrl.signal });
+      text = await resp.text();
+    } catch (e) {
+      continue;
+    } finally {
+      clearTimeout(timer);
+    }
+    if (!/^\s*\{/.test(text)) continue;
+    const r = JSON.parse(text);
+    if (!r.ok) throw new Error(r.error);
+    return responseData(r);
+  }
+  throw new Error('Сервер не ответил. Проверьте интернет и попробуйте ещё раз.');
+}
+
+/* ---------- помощники ---------- */
+const $ = (s, el) => (el || document).querySelector(s);
+const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const money = n => (n === '' || n == null || isNaN(+n)) ? '' : Math.round(+n).toLocaleString('ru-RU');
+const rub = n => n ? money(n) + ' ₽' : '—';
+const pct = n => n ? Math.round(n * 100) + '%' : '0%';
+const ruD = s => s ? s.slice(8, 10) + '.' + s.slice(5, 7) + '.' + s.slice(0, 4) : '';
+const isoToday = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+const shiftDays = (iso, n) => { const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + n); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+const monthStart = iso => iso.slice(0, 8) + '01';
+const MONTHS = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+const monthName = key => key === 'none' ? 'Без даты следующего шага' : key === 'overdue' ? 'Просрочено' : MONTHS[+key.slice(5, 7) - 1] + ' ' + key.slice(0, 4);
+const PRIORITIES = ['Ключевой', 'Неключевой'];
+const opt = (v, sel, label) => `<option value="${esc(v)}"${v === sel ? ' selected' : ''}>${esc(label == null ? (PEOPLE[v] || v) : label)}</option>`;
+const kindOf = status => S.kinds[status] || 'open';
+// Статусы для выбора. Снятый с выбора текущий статус старой записи остаётся в списке, чтобы его не пришлось менять.
+const pickStatuses = keep => S.dicts.statuses.filter(s => s.active !== false || s.name === keep);
+const chip = status => status ? `<span class="chip k-${kindOf(status)}">${esc(status)}</span>` : '';
+
+function toast(msg, isErr) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.className = 'on' + (isErr ? ' err' : '');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => { t.className = ''; }, isErr ? 5000 : 2500);
+}
+
+function openModal(html) {
+  $('#sheet').innerHTML = html;
+  $('#modal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  $$('[data-close]', $('#sheet')).forEach(b => b.addEventListener('click', closeModal));
+}
+function closeModal() {
+  $('#modal').classList.add('hidden');
+  $('#sheet').innerHTML = '';
+  document.body.style.overflow = '';
+}
+$('#modal').addEventListener('mousedown', e => { if (e.target.id === 'modal') closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modal').classList.contains('hidden')) closeModal(); });
+
+async function busy(btn, label, fn) {
+  const old = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = label;
+  try { return await fn(); }
+  catch (e) { toast(e.message, true); }
+  finally { btn.disabled = false; btn.textContent = old; }
+}
+
+function copyText(text, input) {
+  const done = () => toast('Ссылка скопирована');
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(done, () => fallback());
+  } else fallback();
+  function fallback() {
+    if (input) { input.select(); }
+    try { document.execCommand('copy'); done(); } catch (e) { toast('Скопируйте ссылку вручную', true); }
+  }
+}
+
+/* ---------- состояние и навигация ---------- */
+const S = { me: null, dicts: null, kinds: {}, fios: [], tab: 'plan', items: {}, fio: '' };
+const TABS = [
+  ['plan', 'План', () => true],
+  ['acts', 'Активности', () => true],
+  ['reports', me => me.canReport ? 'Отчёты' : 'Выполнение плана', () => true],
+  ['admin', 'Админ', me => me.isAdmin]
+];
+const VIEWS = {};
+
+function renderTabs() {
+  $('#tabs').innerHTML = TABS.filter(t => t[2](S.me))
+    .map(t => `<button data-tab="${t[0]}" class="${t[0] === S.tab ? 'on' : ''}">${typeof t[1] === 'function' ? t[1](S.me) : t[1]}</button>`).join('');
+  $$('#tabs button').forEach(b => b.addEventListener('click', () => go(b.dataset.tab)));
+}
+
+function go(tab) {
+  if (!TABS.some(t => t[0] === tab && t[2](S.me))) tab = 'plan';
+  S.tab = tab;
+  try { localStorage.setItem('akt_tab', tab); } catch (e) { /* ignore */ }
+  renderTabs();
+  $('#view').innerHTML = '<div class="loading">Загрузка…</div>';
+  return VIEWS[tab]().catch(e => { $('#view').innerHTML = `<div class="card pad">${esc(e.message)}</div>`; });
+}
+const refresh = () => go(S.tab);
+
+// Обновить текущий экран в фоне, не стирая то, что уже видно.
+function softRefresh() {
+  if (S.tab === 'acts' && $('#actList')) return loadActs().catch(() => {});
+  if (S.tab !== 'admin' && S.tab !== 'reports') return VIEWS[S.tab]().catch(() => {});
+}
+
+function fioFilter() {
+  if (S.fios.length < 2) return '';
+  return `<label>Сотрудник<select id="fioSel"><option value="">Все</option>${S.fios.map(f => opt(f, S.fio, shortFio(f))).join('')}</select></label>`;
+}
+function bindFioFilter() {
+  const sel = $('#fioSel');
+  if (sel) sel.addEventListener('change', () => { S.fio = sel.value; refresh(); });
+}
+
+/* ---------- План ---------- */
+VIEWS.plan = async () => {
+  const pre = S.prefetchPlan;
+  S.prefetchPlan = null;
+  const d = await (pre && !S.fio ? pre : call('plan', { fio: S.fio }));
+  S.items = {};
+  const sec = (title, list, red) => {
+    list.forEach(i => { S.items[i.id] = i; });
+    return `<h3>${title}<span class="badge${red && list.length ? ' red' : ''}">${list.length}</span></h3>` +
+      (list.length ? `<div class="items">${list.map(itemCard).join('')}</div>` : '<div class="empty">Нет</div>');
+  };
+  $('#view').innerHTML = `
+    <div class="toolbar">${fioFilter()}<span class="sp"></span>
+      <button class="btn primary" id="addBtn">+ Активность</button></div>
+    ${sec('Просрочено', d.overdue, true)}
+    ${sec('Сегодня', d.todayList)}
+    ${sec('До конца недели', d.week)}
+    ${sec('Следующая неделя', d.nextWeek)}
+    ${d.later.length ? sec('Позже', d.later) : ''}
+    ${d.noNext.length ? sec('В работе без следующего шага', d.noNext, true) : ''}`;
+  bindFioFilter();
+  $('#addBtn').addEventListener('click', () => openForm({}));
+  bindItemButtons();
+};
+
+function itemCard(i) {
+  const who = S.me.seeAll || S.fios.length > 1 ? ` · ${esc(shortFio(i.fio))}` : '';
+  return `<div class="card item">
+    <div class="r1"><span class="name">${esc(i.short || 'ИНН ' + i.inn)}</span>${chip(i.status)}</div>
+    <div class="meta">ИНН ${esc(i.inn)}${who} · Пиратка: ${esc(i.pirate || 'нет')}</div>
+    <div class="meta">${i.next ? 'След. шаг: <b>' + ruD(i.next) + '</b> · ' : ''}последняя: ${esc(i.type)} ${ruD(i.date)}</div>
+    <div class="cm">${esc(i.comment)}</div>
+    <div class="acts">
+      ${i.canEdit && !completedStatus(i.status) ? `<button class="btn sm primary" data-follow="${esc(i.id)}">Записать результат</button>` : ''}
+      <button class="btn sm" data-open="${esc(i.id)}">Открыть</button>
+    </div></div>`;
+}
+
+function bindItemButtons() {
+  $$('[data-follow]').forEach(b => b.addEventListener('click', () => busy(b, 'Открываем…', () => followUp(S.items[b.dataset.follow]))));
+  $$('[data-open]').forEach(b => b.addEventListener('click', () => openForm(S.items[b.dataset.open])));
+}
+
+const completedStatus = status => status === 'Отказ' || status === 'Договор подписан';
+const needsVolume = status => status === 'Получено согласие' || kindOf(status) === 'deal';
+async function followUp(i) {
+  const latest = await call('activityForResult', { id: i.id });
+  openForm(Object.assign({}, latest, { recordResult: true, resultDate: isoToday() }));
+}
+
+/* ---------- Активности ---------- */
+const ACT_F = { from: '', to: '', status: '', type: '', channel: '', q: '' };
+VIEWS.acts = async () => {
+  if (!ACT_F.from) { ACT_F.from = monthStart(shiftDays(monthStart(isoToday()), -1)); }
+  const d = S.dicts;
+  $('#view').innerHTML = `
+    <div class="card pad toolbar">
+      <label>С<input type="date" id="fFrom" value="${ACT_F.from}"></label>
+      <label>По<input type="date" id="fTo" value="${ACT_F.to}"></label>
+      ${fioFilter()}
+      <label>Статус<select id="fStatus"><option value="">Все</option>${d.statuses.map(s => opt(s.name, ACT_F.status)).join('')}</select></label>
+      <label>Вид<select id="fType"><option value="">Все</option>${d.types.map(t => opt(t, ACT_F.type)).join('')}</select></label>
+      <label>Канал<select id="fChannel"><option value="">Все</option>${d.channels.map(c => opt(c, ACT_F.channel)).join('')}</select></label>
+      <label>Поиск<input id="fQ" placeholder="ИНН, название, текст" value="${esc(ACT_F.q)}"></label>
+      <span class="sp"></span>
+      <button class="btn primary" id="addBtn">+ Активность</button>
+    </div>
+    <div id="actSum"></div>
+    <div id="actList" class="loading">Загрузка…</div>`;
+  bindFioFilter();
+  $('#addBtn').addEventListener('click', () => openForm({}));
+  const apply = () => {
+    ACT_F.from = $('#fFrom').value; ACT_F.to = $('#fTo').value; ACT_F.status = $('#fStatus').value;
+    ACT_F.type = $('#fType').value; ACT_F.channel = $('#fChannel').value; ACT_F.q = $('#fQ').value.trim();
+    loadActs();
+  };
+  ['#fFrom', '#fTo', '#fStatus', '#fType', '#fChannel'].forEach(s => $(s).addEventListener('change', apply));
+  let t;
+  $('#fQ').addEventListener('input', () => { clearTimeout(t); t = setTimeout(apply, 400); });
+  await loadActs();
+};
+
+async function loadActs() {
+  const box = $('#actList');
+  const d = await call('listActivities', Object.assign({ fio: S.fio }, ACT_F));
+  S.items = {};
+  d.rows.forEach(r => { S.items[r.id] = r; });
+  const showFio = S.fios.length > 1;
+  $('#actSum').innerHTML = d.rows.length ? actsSummary(d.sum, showFio) : '';
+  if (!d.rows.length) { box.className = 'card pad empty'; box.textContent = 'Активностей за период нет'; return; }
+  box.className = 'card tbl-wrap';
+  box.innerHTML = `<table class="resp"><thead><tr>
+      <th>Дата</th>${showFio ? '<th>Сотрудник</th>' : ''}<th>Клиент</th><th>Вид</th><th>Статус</th>
+      <th>Пиратка</th><th class="num">Оборот, ₽/месяц</th><th>След.</th><th>Комментарий</th></tr></thead>
+    <tbody>${d.rows.map(r => `<tr class="click" data-id="${esc(r.id)}">
+      <td data-l="Дата">${ruD(r.date)}</td>
+      ${showFio ? `<td data-l="Сотрудник">${esc(shortFio(r.fio))}</td>` : ''}
+      <td data-l="Клиент"><b>${esc(r.short || '—')}</b><br><span class="muted">${esc(r.inn)}</span></td>
+      <td data-l="Вид">${esc(r.type)}</td>
+      <td data-l="Статус">${chip(r.status)}</td>
+      <td data-l="Пиратка">${esc(r.pirate || 'нет')}</td>
+      <td data-l="Оборот, ₽/месяц" class="num">${money(r.dealSum)}</td>
+      <td data-l="След.">${ruD(r.next)}</td>
+      <td data-l="Комментарий" class="cm">${esc(r.comment)}</td></tr>`).join('')}</tbody></table>
+    ${d.total > d.rows.length ? `<div class="pad muted">Показаны первые ${d.rows.length} из ${d.total}. Уточните фильтр.</div>` : ''}`;
+  $$('tr[data-id]', box).forEach(tr => tr.addEventListener('click', () => openForm(S.items[tr.dataset.id])));
+}
+
+// Итоги за выбранный период и фильтры: по всем отобранным активностям, а не только по показанным строкам.
+function actsSummary(s, showFio) {
+  const kpi = (v, l, sub) => `<div class="card kpi"><b>${v}</b><span>${l}</span>${sub ? `<small>${sub}</small>` : ''}</div>`;
+  const list = (title, o, fmt = esc) => `<div class="card kpi"><span>${title}</span><ul class="sum-list">${Object.keys(o)
+    .sort((a, b) => o[b] - o[a]).map(k => `<li>${fmt(k)}<b>${money(o[k])}</b></li>`).join('')}</ul></div>`;
+  return `<div class="kpis sum-nums">
+      ${kpi(money(s.count), 'активностей', 'дней с активностями: ' + s.days)}
+      ${showFio ? kpi(s.fios, 'сотрудников') : ''}
+      ${kpi(money(s.clients), 'клиентов', 'ключевых: ' + s.key)}
+      ${kpi(money(s.pirateClients), 'клиентов в пиратке')}
+      ${kpi(money(s.deals), 'сделок', s.dealSum ? 'на ' + rub(s.dealSum) : '')}
+      ${kpi(money(s.next), 'след. шагов назначено', 'ещё впереди: ' + s.nextAhead)}
+    </div>
+    <div class="kpis">
+      ${list('По видам', s.byType)}
+      ${list('По статусам', s.byStatus, chip)}
+      ${list('По каналам', s.byChannel)}
+    </div>`;
+}
+
+/* ---------- Форма активности ---------- */
+const commentDatePrefix = () => new Intl.DateTimeFormat('ru-RU', { timeZone: 'Europe/Kaliningrad', day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date()) + ' — ';
+const commentBody = text => String(text || '').trim().replace(/^\d{2}\.\d{2}\.\d{4}\s*[—–-]\s*/, '').trim();
+
+async function fillCompanyNamesFromButton(f, hint) {
+  const inn = f.inn.value.trim();
+  if (!/^(\d{10}|\d{12})$/.test(inn)) { hint.textContent = 'Введите ИНН из 10 или 12 цифр'; return null; }
+  if (f.short.value.trim() && f.full.value.trim()) { hint.textContent = 'Названия уже заполнены. Для поиска очистите нужное поле.'; return null; }
+  hint.textContent = 'Ищем в сохранённых данных и внешнем источнике…';
+  try {
+    const r = await call('lookupCompanyOnline', { inn, manual: true });
+    if (!f.isConnected) return null;
+    if (f.inn.value.trim() !== inn) { hint.textContent = 'ИНН изменён. Повторите поиск.'; return null; }
+    if (!r.company) { hint.textContent = r.message || 'Название по этому ИНН не найдено. Можно заполнить вручную.'; return null; }
+    const filled = { inn, short: '', full: '' };
+    if (!f.short.value.trim() && r.company.short) { f.short.value = r.company.short; filled.short = r.company.short; }
+    if (!f.full.value.trim() && r.company.full) { f.full.value = r.company.full; filled.full = r.company.full; }
+    hint.textContent = (filled.short || filled.full ? (r.fromCache || r.source === 'Сохранённые данные' ? 'Подставлены сохранённые названия. ' : 'Названия получены с egrul.org. ') + 'Сохраните активность.' : 'Названия уже заполнены — введённые значения сохранены.') + (r.unavailable ? ' ' + r.message : '');
+    return filled;
+  } catch (e) {
+    if (f.isConnected) hint.textContent = 'Не удалось найти название: ' + e.message;
+    return null;
+  }
+}
+
+function openForm(pre, errMsg) {
+  const a = Object.assign({ date: isoToday(), fio: S.me.fio }, pre);
+  const isEdit = !!a.id;
+  const result = !!a.recordResult;
+  const operationId = a.operationId || crypto.randomUUID();
+  const ro = isEdit && !a.canEdit;
+  const appendMode = isEdit && !result && !ro;
+  const d = S.dicts;
+  const fioList = S.fios.indexOf(a.fio) >= 0 ? S.fios : [a.fio].concat(S.fios);
+  const fioField = S.me.seeAll && !ro && !result
+    ? `<label class="fld"><span>Сотрудник *</span><select name="fio">${fioList.map(f => opt(f, a.fio, shortFio(f))).join('')}</select></label>`
+    : `<div class="fld"><span>Сотрудник</span><div class="static">${esc(shortFio(a.fio))}</div></div>`;
+  openModal(`
+    <div class="mhead"><h2>${ro ? 'Активность' : result ? 'Записать результат' : isEdit ? 'Изменить активность' : 'Новая активность'}</h2>
+      <button class="icon" data-close aria-label="Закрыть">✕</button></div>
+    <form class="form" id="actForm" novalidate>
+      ${fioField}
+      <div class="grid2">
+        <div class="fld"><label for="actInn">ИНН *</label><input id="actInn" name="inn" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="10 или 12 цифр" value="${esc(a.inn || '')}"${result ? ' readonly' : ''}>
+          ${ro ? '' : '<button type="button" class="btn sm" id="findCompanyBtn" style="margin-top:6px">Найти название по ИНН</button>'}
+          <small id="companyLookupHint" aria-live="polite">Внешний поиск — только по кнопке.</small>
+          <small><a href="https://egrul.nalog.ru/" target="_blank" rel="noopener noreferrer">Официальный поиск ФНС</a> — при недоступности источника</small></div>
+        <label class="fld"><span>${result ? 'Дата результата' : 'Дата активности'} *</span><input type="date" name="date" value="${esc(result ? a.resultDate : a.date || '')}"${result ? ` min="${esc(a.date)}" max="${isoToday()}"` : ''}></label>
+      </div>
+      <div class="fld"><span>Приоритет клиента *</span><div class="seg">${PRIORITIES.map(p =>
+        `<label><input type="radio" name="priority" value="${p}"${p === a.priority ? ' checked' : ''}><span>${p}</span></label>`).join('')}</div>
+        <small id="prHint"></small></div>
+      <div id="innCard" class="inncard hidden"></div>
+      <label class="fld"><span>Краткое название ЮЛ</span><input name="short" value="${esc(a.short || '')}" placeholder="введите или найдите по кнопке"></label>
+      <label class="fld"><span>Полное название ЮЛ</span><input name="full" value="${esc(a.full || '')}" placeholder="введите или найдите по кнопке"></label>
+      <div class="fld"><span>Вид активности *</span><div class="seg">${d.types.map(t =>
+        `<label><input type="radio" name="type" value="${esc(t)}"${t === a.type ? ' checked' : ''}><span>${esc(t)}</span></label>`).join('')}</div></div>
+      <div class="grid2">
+        <label class="fld"><span>Канал поступления *</span><select name="channel"><option value="">— выберите —</option>${d.channels.map(c => opt(c, a.channel)).join('')}</select></label>
+        <label class="fld"><span>Статус *</span><select name="status"><option value="">— выберите —</option>${pickStatuses(a.id ? a.status : '').map(s => opt(s.name, a.status, s.active === false ? s.name + ' (больше не используется)' : s.name)).join('')}</select></label>
+      </div>
+      <label class="fld hidden" id="dealFld"><span>Объём оборота, ₽/месяц *</span><input name="dealSum" inputmode="decimal" value="${esc(a.dealSum || '')}"></label>
+      <div class="grid2">
+        <label class="fld"><span>Дата следующей активности</span><input type="date" name="next" value="${esc(a.next || '')}"></label>
+      </div>
+      ${result ? `<div class="fld"><span>Предыдущий комментарий</span><div class="cm" style="white-space:pre-wrap">${esc(a.comment || '')}</div></div>` : ''}
+      ${appendMode ? '<details><summary>История комментариев (открыть или исправить)</summary>' : ''}
+      <label class="fld"><span>${result ? 'Результат контакта — добавится к комментарию' : 'Комментарий — суть активности'} *</span>
+        <textarea name="comment" rows="4" placeholder="Что обсудили, о чём договорились, какой следующий шаг">${esc(result ? a.resultComment || commentDatePrefix() : a.comment || (!isEdit ? commentDatePrefix() : ''))}</textarea>
+        ${appendMode ? '' : '<small id="cmCount"></small>'}</label>
+      ${appendMode ? `</details><label class="fld"><span>Новый комментарий — добавится к истории</span><textarea name="appendComment" rows="4">${esc(commentDatePrefix())}</textarea><small id="cmCount"></small></label>` : ''}
+      <div class="ferr" id="ferr">${esc(errMsg || '')}</div>
+      <div class="mfoot">
+        ${isEdit && !ro ? '<button type="button" class="btn ghost danger" id="delBtn">Удалить</button>' : ''}
+        ${isEdit && !ro && !result && completedStatus(a.status) ? '<button type="button" class="btn ghost" id="dupBtn">Новая по клиенту</button>' : ''}
+        <span class="sp"></span>
+        <button type="button" class="btn ghost" data-close>${ro ? 'Закрыть' : 'Отмена'}</button>
+        ${ro ? '' : '<button type="submit" class="btn primary" id="saveBtn">Сохранить</button>'}
+      </div>
+    </form>`);
+
+  const f = $('#actForm');
+  if (ro) $$('input, select, textarea', f).forEach(el => { el.disabled = true; });
+
+  const dealToggle = () => $('#dealFld').classList.toggle('hidden', !needsVolume(f.status.value));
+  f.status.addEventListener('change', dealToggle);
+  dealToggle();
+
+  const commentEntry = appendMode ? f.appendComment : f.comment;
+  if (!ro && (appendMode || result || !isEdit)) commentEntry.addEventListener('focus', () => {
+    if (!commentBody(commentEntry.value)) { commentEntry.value = commentDatePrefix(); commentEntry.setSelectionRange(commentEntry.value.length, commentEntry.value.length); }
+  });
+  const cm = () => {
+    const n = commentBody(commentEntry.value).length;
+    $('#cmCount').textContent = appendMode && !n ? 'Можно оставить пустым, если меняете только другие поля' : n < S.minComment ? `минимум ${S.minComment} символов, сейчас ${n}` : '';
+  };
+  commentEntry.addEventListener('input', cm);
+  cm();
+
+  let lastInn = '', checkedInn = '', blockedInn = false;
+  const needsCheck = () => !isEdit || f.inn.value !== a.inn;
+  const syncSave = () => { if ($('#saveBtn')) $('#saveBtn').disabled = needsCheck() && (checkedInn !== f.inn.value || blockedInn); };
+  syncSave();
+  let autoNames = !a.short && !a.full, onlineNames = null;
+  const findCompanyBtn = $('#findCompanyBtn');
+  if (findCompanyBtn) findCompanyBtn.addEventListener('click', () => busy(findCompanyBtn, 'Ищем название…', async () => {
+    autoNames = false;
+    const filled = await fillCompanyNamesFromButton(f, $('#companyLookupHint'));
+    if (filled) onlineNames = filled;
+  }));
+  f.short.addEventListener('input', () => { autoNames = false; });
+  $$('input[name=priority]', f).forEach(el => el.addEventListener('change', () => { $('#prHint').textContent = ''; }));
+
+  const lookup = async inn => {
+    const card = $('#innCard');
+    card.classList.remove('hidden');
+    card.innerHTML = '<span class="muted">Ищем по ИНН…</span>';
+    try {
+      const r = await call('lookupInn', { inn });
+      if (f.inn.value !== inn || !f.isConnected) return;
+      checkedInn = inn; blockedInn = !!r.blocked; syncSave();
+      if (r.company && autoNames && !ro) {
+        f.short.value = r.company.short || '';
+        f.full.value = r.company.full || '';
+      }
+      // Приоритет подставляем, только если его ещё не выбрали.
+      if (r.priority && !ro && !f.querySelector('input[name=priority]:checked')) {
+        const el = f.querySelector(`input[name=priority][value="${r.priority.value}"]`);
+        if (el) { el.checked = true; $('#prHint').textContent = 'подставлен ' + r.priority.source + ', проверьте'; }
+      }
+      card.innerHTML = innCard(r, f.fio ? f.fio.value : a.fio, a.id);
+      bindHistory(card);
+      $$('[data-finish]', card).forEach(b => b.addEventListener('click', () => openForm(r.unfinished.find(x => x.id === b.dataset.finish))));
+    } catch (e) {
+      if (!f.isConnected || f.inn.value !== inn) return;
+      checkedInn = ''; lastInn = ''; syncSave();
+      card.innerHTML = `<div class="note warn">${esc(e.message)} <button type="button" class="btn sm" id="retryInn">Повторить проверку</button></div>`;
+      $('#retryInn', card).onclick = () => lookup(inn);
+    }
+  };
+  const onInn = () => {
+    const v = f.inn.value.replace(/\D/g, '');
+    if (v !== f.inn.value) f.inn.value = v;
+    syncSave();
+    if (findCompanyBtn) findCompanyBtn.disabled = !/^(\d{10}|\d{12})$/.test(v);
+    if (onlineNames && onlineNames.inn !== v) {
+      if (onlineNames.short && f.short.value === onlineNames.short) f.short.value = '';
+      if (onlineNames.full && f.full.value === onlineNames.full) f.full.value = '';
+      onlineNames = null; $('#companyLookupHint').textContent = 'ИНН изменён. Найдите название по кнопке.';
+    }
+    if ((v.length === 10 || v.length === 12) && v !== lastInn) { lastInn = v; lookup(v); }
+  };
+  f.inn.addEventListener('input', onInn);
+  onInn();
+
+  const dup = $('#dupBtn');
+  if (dup) dup.addEventListener('click', () => openForm({ fio: a.fio, inn: a.inn, short: a.short, full: a.full, priority: a.priority, channel: a.channel }));
+
+  const del = $('#delBtn');
+  if (del) del.addEventListener('click', () => {
+    if (!del.dataset.sure) { del.dataset.sure = '1'; del.textContent = 'Точно удалить?'; return; }
+    closeModal();
+    $$('[data-id]').filter(el => el.dataset.id === a.id).forEach(el => el.remove());
+    toast('Удаляем…');
+    call('deleteActivity', { id: a.id })
+      .then(() => { REP.data = null; REP.key = ''; toast('Активность удалена'); softRefresh(); })
+      .catch(ex => { toast(ex.message, true); softRefresh(); });
+  });
+
+  f.addEventListener('submit', async e => {
+    e.preventDefault();
+    const v = {
+      id: a.id || '', expectedUpdated: a.updated, operationId, recordResult: result, resultDate: result ? f.date.value : '',
+      fio: f.fio ? f.fio.value : a.fio, inn: f.inn.value.trim(), date: result ? a.date : f.date.value,
+      short: f.short.value.trim(), full: f.full.value.trim(), channel: f.channel.value, status: f.status.value,
+      type: (f.querySelector('input[name=type]:checked') || {}).value || '', next: f.next.value,
+      priority: (f.querySelector('input[name=priority]:checked') || {}).value || '',
+      comment: f.comment.value.trim(), historyEdited: appendMode ? f.comment.value !== String(a.comment || '') : undefined,
+      appendComment: appendMode ? f.appendComment.value.trim() : '', dealSum: f.dealSum.value.trim()
+    };
+    const err = needsCheck() && (checkedInn !== v.inn || blockedInn) ? 'Завершите предыдущие активности и дождитесь проверки ИНН'
+      : !/^(\d{10}|\d{12})$/.test(v.inn) ? 'ИНН должен содержать 10 или 12 цифр'
+      : !v.date ? 'Укажите дату активности'
+      : !v.priority ? 'Укажите приоритет клиента: ключевой или неключевой'
+      : !v.type ? 'Выберите вид активности'
+      : !v.channel ? 'Выберите канал поступления'
+      : !v.status ? 'Выберите статус'
+      : needsVolume(v.status) && !(parseFloat(v.dealSum.replace(/\s/g, '').replace(',', '.')) > 0) ? `Для статуса «${v.status}» укажите объём оборота в месяц`
+      : !completedStatus(v.status) && v.next && v.next < (result ? v.resultDate : v.date) ? 'Дата следующей активности раньше даты активности'
+      : appendMode && commentBody(v.appendComment) && commentBody(v.appendComment).length < S.minComment ? 'Опишите новый комментарий подробнее'
+      : (isEdit && !result ? v.comment.length : commentBody(v.comment).length) < S.minComment ? 'Опишите в комментарии суть активности' : '';
+    $('#ferr').textContent = err;
+    if (err) return;
+    const save = $('#saveBtn'); save.disabled = true; save.textContent = 'Сохраняем…';
+    try {
+      await call('saveActivity', v);
+      REP.data = null; REP.key = '';
+      closeModal(); toast(result ? 'Результат добавлен в активность' : 'Сохранено'); softRefresh();
+    } catch (ex) {
+      if (f.isConnected) { $('#ferr').textContent = ex.message; save.disabled = false; save.textContent = 'Сохранить'; }
+      else toast(ex.message, true);
+    }
+  });
+}
+
+function innCard(r, fio, curId) {
+  const c = r.company;
+  const others = r.inWork.filter(w => w.fio !== fio);
+  const unfinished = (r.unfinished || []).filter(a => a.canEdit && a.id !== curId);
+  return `
+    <div><b>${esc(c ? c.short : 'Название не показано')}</b>
+      ${c && c.status ? `<span class="muted"> · ${esc(c.status)}</span>` : ''}
+      ${c && c.region ? `<span class="muted"> · ${esc(c.region)}</span>` : ''}</div>
+    <div class="g"><div><span class="muted">Пиратка</span><b class="big">${esc(r.pirate || '—')}</b></div></div>
+    ${r.blocked ? `<div class="note warn">По ИНН есть незавершённая активность${r.unfinishedCount ? ` (доступных вам записей: ${r.unfinishedCount})` : ''}. Чтобы создать новую, завершите предыдущие: «Отказ» или «Договор подписан». ${unfinished.map(a => `<button type="button" class="btn sm" data-finish="${esc(a.id)}">Завершить: ${ruD(a.date)} · ${esc(a.status)}</button>`).join('')}<div>Если запись не видна, обратитесь к администратору.</div></div>` : ''}
+    ${others.length ? `<div class="note warn">Клиент уже в работе: ${others.map(w => `${esc(shortFio(w.fio))} — ${esc(w.status)} (${ruD(w.date)})`).join('; ')}</div>` : ''}
+    ${r.history.length ? `<button type="button" class="btn sm" id="histBtn" aria-expanded="false">Все активности по клиенту (${r.history.length})</button>
+      <ul class="hist hidden" id="histList">${r.history.map(h => histItem(h, h.id === curId)).join('')}</ul>`
+      : '<span class="muted">Активностей по клиенту ещё не было</span>'}`;
+}
+
+function histItem(h, cur) {
+  const meta = [esc(h.type), esc(h.channel), S.fios.length > 1 ? esc(shortFio(h.fio)) : '',
+    h.dealSum ? 'оборот/месяц ' + rub(h.dealSum) : '', h.next ? 'след. шаг ' + ruD(h.next) : ''].filter(Boolean).join(' · ');
+  return `<li${cur ? ' class="cur"' : ''}><div><b>${ruD(h.date)}</b> ${chip(h.status)}${cur ? ' <span class="muted">— эта запись</span>' : ''}</div>
+    <div class="muted">${meta}</div><div class="hc">${esc(h.comment) || '<span class="muted">без комментария</span>'}</div></li>`;
+}
+
+function bindHistory(card) {
+  const btn = $('#histBtn', card), list = $('#histList', card);
+  if (!btn) return;
+  const label = btn.textContent;
+  btn.addEventListener('click', () => {
+    const open = list.classList.toggle('hidden') === false;
+    btn.setAttribute('aria-expanded', open);
+    btn.textContent = open ? 'Скрыть активности по клиенту' : label;
+  });
+}
+
+/* ---------- Отчёты: выполнение плана (видят все), активность сотрудников и выгрузка в Excel ---------- */
+const PLAN_V = { month: isoToday().slice(0, 7), seq: 0 };
+const REP = { period: 'week', date: isoToday(), from: '', to: '', empType: '', data: null, key: '', seq: 0, reload: null };
+const repArgs = () => ({ period: REP.period, date: REP.date, from: REP.from, to: REP.to });
+
+VIEWS.reports = async () => {
+  const full = S.me.canReport;
+  if (full) loadXlsx().catch(() => {});
+  const per = [['day', 'День'], ['week', 'Неделя'], ['month', 'Месяц'], ['custom', 'Период'], ['all', 'Всё время']];
+  const months = planMonths();
+  $('#view').innerHTML = `
+    <h3 class="plan-h">Продажи за месяц<select id="pvMonth" aria-label="Месяц">${months.map(k => opt(k, PLAN_V.month, monthLabel(k))).join('')}</select>
+      <span style="flex:1"></span>${S.me.seeAll ? '<button class="btn sm" id="rPlans">Задать планы</button>' : ''}</h3>
+    <div id="confirmedBox"><div class="loading">Сверяем продажи…</div></div>
+    <h3>План и регистрации торговых точек</h3>
+    <div id="planBox"><div class="loading">Считаем…</div></div>
+    ${full ? `<h3>Отчёт по МПП на дату формирования</h3><p class="muted">Согласия и «Клиент думает» — по последнему статусу ИНН за 30 дней. Период ниже задаёт остальные листы Excel.</p>
+    <div class="card pad toolbar">
+      <div class="seg">${per.map(p => `<label><input type="radio" name="per" value="${p[0]}"${p[0] === REP.period ? ' checked' : ''}><span>${p[1]}</span></label>`).join('')}</div>
+      <label id="rDateL">Дата в периоде<input type="date" id="rDate" value="${REP.date}"></label>
+      <label id="rFromL">С<input type="date" id="rFrom" value="${REP.from}"></label>
+      <label id="rToL">По<input type="date" id="rTo" value="${REP.to}"></label>
+      <span class="sp"></span>
+      <button class="btn" id="rRefresh">Обновить отчёт</button>
+      <button class="btn" id="rXls" title="Сводка, все разрезы, активности и клиенты за выбранный период">Выгрузить в Excel</button>
+    </div>
+    <div id="rOut"><div class="loading">Считаем…</div></div>` : ''}`;
+  $('#pvMonth').addEventListener('change', e => { PLAN_V.month = e.target.value; loadPlanBlock(); });
+  if ($('#rPlans')) $('#rPlans').addEventListener('click', () => plansForm(PLAN_V.month));
+  const planLoad = loadPlanBlock();
+  if (!full) {
+    REP.reload = loadPlanBlock;
+    return planLoad;
+  }
+
+  const sync = () => {
+    REP.period = $('input[name=per]:checked').value;
+    $('#rDateL').classList.toggle('hidden', REP.period === 'custom' || REP.period === 'all');
+    $('#rFromL').classList.toggle('hidden', REP.period !== 'custom');
+    $('#rToL').classList.toggle('hidden', REP.period !== 'custom');
+  };
+  const readInputs = () => {
+    REP.date = $('#rDate').value || isoToday(); REP.from = $('#rFrom').value; REP.to = $('#rTo').value;
+    return !(REP.period === 'custom' && (!REP.from || !REP.to || REP.from > REP.to));
+  };
+  const getData = async () => {
+    const key = JSON.stringify(repArgs());
+    if (REP.data && REP.key === key) return REP.data;
+    const r = await call('reportData', repArgs());
+    REP.data = r; REP.key = key;
+    return r;
+  };
+  const load = async () => {
+    if (!readInputs()) { $('#rOut').innerHTML = '<div class="card pad muted">Укажите дату начала и окончания периода</div>'; return; }
+    const seq = ++REP.seq;
+    if (!(REP.data && REP.key === JSON.stringify(repArgs()))) $('#rOut').innerHTML = '<div class="loading">Считаем…</div>';
+    try {
+      await getData();
+      if (seq === REP.seq) renderManagers();
+    } catch (e) {
+      if (seq === REP.seq) $('#rOut').innerHTML = `<div class="card pad">${esc(e.message)}</div>`;
+    }
+  };
+  $$('input[name=per]').forEach(r => r.addEventListener('change', () => { sync(); load(); }));
+  ['#rDate', '#rFrom', '#rTo'].forEach(id => $(id).addEventListener('change', load));
+  REP.reload = () => { REP.data = null; REP.key = ''; loadPlanBlock(); load(); };
+  $('#rRefresh').addEventListener('click', REP.reload);
+  sync();
+  $('#rXls').addEventListener('click', e => busy(e.target, 'Готовим файл…', async () => {
+    if (!readInputs()) throw new Error('Укажите период: дату начала и окончания');
+    const [r] = await Promise.all([getData(), loadXlsx()]);
+    const name = 'Отчёт_' + (REP.period === 'all' ? 'всё_время_' + isoToday() : r.from + (r.from === r.to ? '' : '_' + r.to)) + '.xlsx';
+    XLSX.writeFile(reportWorkbook(r), name);
+    toast('Файл выгружен');
+  }));
+  await Promise.all([planLoad, load()]);
+};
+
+const shortFio = f => {
+  if (PEOPLE[f]) return PEOPLE[f];
+  if (/^person_/.test(String(f || ''))) return 'Сотрудник';
+  const p = String(f || '').trim().split(/\s+/).filter(Boolean);
+  if (p.length === 2 && p[1].length <= 3) return p.join(' ');
+  return p.length > 1 ? p[1] + ' ' + p[0].slice(0, 3) : (p[0] ? p[0][0] : '');
+};
+const reportName = f => shortFio(f);
+
+const share = (a, b) => b ? Math.round(a / b * 100) + '%' : '—';
+
+// Сводка по менеджерам из активностей периода. Сделки — по уникальным ИНН, как в серверном отчёте.
+function managerStats(r, empType = REP.empType) {
+  const kinds = S.kinds;
+  const types = S.dicts.types;
+  const typeColor = t => ['var(--c-t1)', 'var(--c-t2)', 'var(--c-t3)'][types.indexOf(t)] || 'var(--c-other)';
+  const openNames = S.dicts.statuses.filter(x => x.kind === 'open').map(x => x.name);
+  const segs = [{ key: 'deal', label: 'Сделка', color: 'var(--c-deal)' }]
+    .concat(openNames.map((n, i) => ({ key: 's:' + n, label: n, color: ['var(--c-open1)', 'var(--c-open2)'][i] || 'var(--c-other)' })))
+    .concat([{ key: 'lost', label: 'Отказ / блокировка', color: 'var(--c-lost)' }]);
+  const segKeys = new Set(segs.map(x => x.key));
+  const segOf = a => {
+    const k = kinds[a.status] === 'deal' ? 'deal' : kinds[a.status] === 'lost' ? 'lost' : 's:' + a.status;
+    return segKeys.has(k) ? k : 'other';
+  };
+  const missName = (S.dicts.statuses.find(x => /недозвон/i.test(x.name)) || {}).name || '';
+  // Колонки статусов: доступные из справочника, затем снятые с выбора и прочие, если они встречаются в периоде.
+  const statusCols = S.dicts.statuses.filter(x => x.active !== false).map(x => x.name);
+  r.details.forEach(a => { if (a.status && statusCols.indexOf(a.status) < 0) statusCols.push(a.status); });
+
+  const staffType = {};
+  (r.staff || []).forEach(u => { staffType[u.fio] = u.type; });
+  const overdue = {};
+  r.overdue.forEach(o => { overdue[o.fio] = o.count; });
+  const plans = (r.plans && r.plans.byFio) || {};
+
+  const byFio = {};
+  const blank = fio => ({ fio, type: staffType[fio] || '', acts: 0, byType: {}, byStatus: {}, bySeg: {}, matrix: {}, missed: 0,
+    inns: new Set(), deals: {}, overdue: overdue[fio] || 0, plan: plans[fio] || null });
+  r.details.forEach(a => {
+    const m = byFio[a.fio] || (byFio[a.fio] = blank(a.fio));
+    const seg = segOf(a), t = types.indexOf(a.type) >= 0 ? a.type : 'Прочее';
+    m.acts++;
+    m.byType[t] = (m.byType[t] || 0) + 1;
+    m.byStatus[a.status] = (m.byStatus[a.status] || 0) + 1;
+    m.bySeg[seg] = (m.bySeg[seg] || 0) + 1;
+    (m.matrix[t] || (m.matrix[t] = {}))[seg] = (m.matrix[t][seg] || 0) + 1;
+    if (missName && a.status === missName) m.missed++;
+    m.inns.add(a.inn);
+    if (seg === 'deal') {
+      const cur = m.deals[a.inn];
+      if (!cur || a.date >= cur.date) m.deals[a.inn] = a;
+    }
+  });
+  if (Object.values(byFio).some(m => m.bySeg.other)) segs.push({ key: 'other', label: 'Прочие статусы', color: 'var(--c-other)' });
+
+  const employees = (r.staff || []).filter(u => u.role === 'Сотрудник').map(u => u.fio);
+  employees.concat(Object.keys(plans)).forEach(f => { if (!byFio[f]) byFio[f] = blank(f); });
+  let list = Object.values(byFio);
+  const empTypes = [...new Set(list.map(m => m.type).filter(Boolean))].sort();
+  if (empType) list = list.filter(m => m.type === empType);
+  list.forEach(m => {
+    m.dealList = Object.values(m.deals);
+    m.dealSum = m.dealList.reduce((x, a) => x + (a.dealSum || 0), 0);
+  });
+  list.sort((a, b) => b.acts - a.acts || a.fio.localeCompare(b.fio, 'ru'));
+  return { list, segs, types, typeColor, missName, empTypes, statusCols };
+}
+
+const fmtPlanN = n => String(Math.round(n * 10) / 10).replace('.', ',');
+const monthLabel = k => MONTHS[+k.slice(5, 7) - 1] + ' ' + k.slice(0, 4);
+const pctTag = p => `<span class="pct ${p >= 100 ? 'ok' : p < 50 ? 'low' : ''}">${p}%</span>`;
+
+// Месяцы для выбора: год назад — следующий месяц.
+function planMonths() {
+  const out = [], base = new Date();
+  for (let i = -12; i <= 1; i++) {
+    const d = new Date(base.getFullYear(), base.getMonth() + i, 1);
+    out.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'));
+  }
+  if (out.indexOf(PLAN_V.month) < 0) out.push(PLAN_V.month);
+  return out.sort().reverse();
+}
+
+async function loadPlanBlock() {
+  const seq = ++PLAN_V.seq;
+  try {
+    const month = PLAN_V.month;
+    if ($('#confirmedBox')) $('#confirmedBox').innerHTML = '<div class="loading">Сверяем продажи…</div>';
+    const confirmedLoad = call('confirmedSalesReport', { month }).then(c => {
+      if (seq === PLAN_V.seq && $('#confirmedBox')) renderConfirmedSales(c);
+    }).catch(e => { if (seq === PLAN_V.seq && $('#confirmedBox')) $('#confirmedBox').textContent = e.message; });
+    const d = await call('planProgress', { month });
+    if (seq === PLAN_V.seq && $('#planBox')) renderPlanBlock(d);
+    await confirmedLoad;
+  } catch (e) {
+    if (seq === PLAN_V.seq && $('#planBox')) $('#planBox').innerHTML = `<div class="card pad">${esc(e.message)}</div>`;
+  }
+}
+
+// План, факт, исполнение, прогноз по RR (факт ÷ прошедшие рабочие дни × все рабочие дни)
+// и справочно — сколько осталось до плана и сколько это в рабочий день.
+function renderPlanBlock(d) {
+  const wd = d.workdays, left = wd.total - wd.passed;
+  const scopeTitle = S.me.seeAll || S.me.canReport ? 'Вся команда' : 'Доступные сотрудники';
+  const started = wd.passed > 0, done = left === 0;
+  const calc = (plan, fact) => {
+    const rr = started ? (done ? fact : fact / wd.passed * wd.total) : null;
+    const need = plan ? Math.max(0, plan - fact) : null;
+    return { rr, need, perDay: need && !done ? need / left : null };
+  };
+  const metric = (label, plan, fact, fmt) => {
+    const { rr, need, perDay } = calc(plan, fact);
+    return `<tr class="mrow">
+      <td data-l="Показатель">${label}</td>
+      <td data-l="План" class="num">${plan ? fmt(plan) : '<span class="muted">не задан</span>'}</td>
+      <td data-l="Факт" class="num"><b>${fmt(fact)}</b></td>
+      <td data-l="Исполнение" class="num">${plan ? pctTag(Math.round(fact / plan * 100)) : '—'}</td>
+      <td data-l="Прогноз (RR)" class="num">${rr == null ? '—' : `<span>${fmt(rr)}${plan ? ' ' + pctTag(Math.round(rr / plan * 100)) : ''}</span>`}</td>
+      <td data-l="Осталось до плана" class="num">${need == null ? '—' : need ? fmt(need) : '<span class="pct ok">выполнен</span>'}</td>
+      <td data-l="Нужно в рабочий день" class="num">${perDay ? fmt(perDay) : '—'}</td></tr>`;
+  };
+  // На телефоне вместо таблицы — карточка: факт из плана и одна справочная строка.
+  const mcard = (label, plan, fact, fmt) => {
+    const { rr, need, perDay } = calc(plan, fact);
+    const sub = [rr != null && 'прогноз ' + fmt(rr) + (plan ? ' (' + Math.round(rr / plan * 100) + '%)' : ''),
+      need != null && (need ? 'осталось ' + fmt(need) + (perDay ? ', ' + fmt(perDay) + ' в день' : '') : 'план выполнен')].filter(Boolean).join(' · ');
+    return `<div class="pv-m"><span class="pv-l">${label}</span>
+      <span class="pv-v"><b>${fmt(fact)}</b>${plan ? ` из ${fmt(plan)} ${pctTag(Math.round(fact / plan * 100))}` : ' <span class="muted">без плана</span>'}</span>
+      ${sub ? `<small>${sub}</small>` : ''}</div>`;
+  };
+  const card = (title, r, cls) => `<div class="card pv-card ${cls}"><div class="pv-who">${title}</div>
+    ${mcard('Регистрации MID, шт', r.plan && r.plan.deals, r.fact.sales, fmtPlanN)}${mcard('Объём, ₽', r.plan && r.plan.volume, r.fact.volume, money)}</div>`;
+  const block = (title, r, cls) => `<tr class="who-row ${cls}"><td colspan="7">${title}</td></tr>` +
+    metric('Регистрации MID, шт', r.plan && r.plan.deals, r.fact.sales, fmtPlanN) +
+    metric('Объём сделок, ₽', r.plan && r.plan.volume, r.fact.volume, money);
+
+  // Сначала сотрудники с планом — по исполнению плана по объёму, затем без плана — по факту.
+  const ex = r => r.plan && r.plan.volume ? r.fact.volume / r.plan.volume : r.plan && r.plan.deals ? r.fact.sales / r.plan.deals : -1;
+  const mine = r => r.fio === S.me.fio ? 1 : 0;
+  const rows = d.rows.slice().sort((a, b) => mine(b) - mine(a) || (!a.fio - !b.fio) || (!!b.plan - !!a.plan) || ex(b) - ex(a) ||
+    b.fact.volume - a.fact.volume || a.fio.localeCompare(b.fio, 'ru'));
+  const title = r => !r.fio ? '<span class="muted">Продажи без МПП</span>' : `${esc(shortFio(r.fio))}${r.type ? ` <span class="muted">${esc(r.type)}</span>` : ''}${mine(r) ? ' <span class="chip k-deal">вы</span>' : ''}`;
+  const team = rows.reduce((t, r) => {
+    if (r.plan) { t.plan.deals += r.plan.deals; t.plan.volume += r.plan.volume; }
+    t.fact.sales += r.fact.sales; t.fact.volume += r.fact.volume;
+    return t;
+  }, { plan: { deals: 0, volume: 0 }, fact: { sales: 0, volume: 0 } });
+  if (!team.plan.deals && !team.plan.volume) team.plan = null;
+
+  const note = !started ? 'Месяц ещё не начался.'
+    : done ? 'Месяц завершён: прогноз равен факту, «осталось до плана» — сколько не хватило.'
+    : `Рабочих дней прошло ${wd.passed} из ${wd.total}, осталось ${left}. Прогноз (RR) — результат на конец месяца при текущем темпе. Праздники не учитываются.`;
+  const src = 'Регистрации MID — строки автоматического источника по дате регистрации (отдельный показатель, не подтверждения по ИНН)' +
+    (d.sales && d.sales.at ? ', загружено ' + new Date(d.sales.at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '') +
+    '. Объём, ₽ — по суммам сделок в активностях.';
+
+  $('#planBox').innerHTML = `<div class="muted note-line">${note}<br>${src}</div>
+    ${rows.length ? `<div class="card tbl-wrap pv-table"><table class="plan-v"><thead><tr>
+      <th>Показатель</th><th class="num">План</th><th class="num">Факт</th><th class="num">Исполнение</th>
+      <th class="num">Прогноз (RR)</th><th class="num">Осталось до плана</th><th class="num">Нужно в рабочий день</th></tr></thead>
+      <tbody>${block(scopeTitle, team, 'team')}${rows.map(r => block(title(r), r, mine(r) ? 'me' : '')).join('')}</tbody></table></div>
+      <div class="pv-cards">${card(scopeTitle, team, 'team')}${rows.map(r => card(title(r), r, mine(r) ? 'me' : '')).join('')}</div>`
+    : `<div class="card pad empty">Планов на ${monthLabel(d.month).toLowerCase()} нет${S.me.seeAll ? ' — нажмите «Задать планы»' : ''}</div>`}`;
+}
+
+// Активность сотрудников за выбранный период: виды, статусы, сделки. Видна тем, у кого есть доступ к отчётам.
+function renderManagers() {
+  const m = REP.data.mpp;
+  if (!m) { $('#rOut').innerHTML = '<div class="card pad">Обновите отчёт</div>'; return; }
+  const total = m.rows.reduce((t, r) => { ['contracts','agreed','thinking','calls','last30'].forEach(k => t[k] += r[k]); return t; }, { contracts:0, agreed:0, thinking:0, calls:0, last30:0 });
+  const goal = (n, target) => `<span class="badge ${n >= target ? 'green' : 'red'}" title="${n >= target ? 'Цель выполнена' : 'Ниже цели'}">${n} / ${target}</span>`;
+  const row = (r, title, count = 1) => `<tr><td>${esc(title)}</td>
+    <td class="num" data-l="Договоры за месяц"><span class="badge ${r.contracts ? 'green' : ''}">${r.contracts}</span></td>
+    <td class="num" data-l="Получено согласие">${goal(r.agreed, 5 * count)}</td>
+    <td class="num" data-l="Клиент думает">${goal(r.thinking, 20 * count)}</td>
+    <td class="num" data-l="Звонки за день">${goal(r.calls, 20 * count)}</td>
+    <td class="num" data-l="Контакты за 30 дней">${r.last30}</td></tr>`;
+  $('#rOut').innerHTML = `<p>На ${ruD(m.asOf)} · последние 30 дней: ${ruD(m.from)}–${ruD(m.asOf)} · договоры: ${monthLabel(m.month)}</p>
+    <div class="card tbl-wrap"><table class="resp wide"><thead><tr><th>МПП</th><th>Договоры за текущий месяц</th><th>Получено согласие / 5</th><th>Клиент думает / 20</th><th>Звонки за день / 20</th><th>Контакты за 30 дней</th></tr></thead>
+    <tbody>${m.rows.map(r => row(r, reportName(r.fio))).join('')}${m.rows.length ? row(total, 'Итого', m.rows.length) : '<tr><td colspan="6">Нет активных сотрудников МПП</td></tr>'}</tbody></table></div>
+    <p class="muted">Красный — ниже цели, зелёный — цель выполнена. Звонки считаются отдельно от встреч и сообщений. Контакты за 30 дней включают все три вида. У старых записей учтён один контакт на дату активности; новые результаты сохраняются в журнале.</p>`;
+}
+
+// Планы на месяц: сделки (шт) и объём сделок (₽) по каждому сотруднику.
+async function plansForm(month) {
+  const opts = [];
+  const base = new Date();
+  for (let i = -12; i <= 12; i++) {
+    const d = new Date(base.getFullYear(), base.getMonth() + i, 1);
+    opts.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'));
+  }
+  if (opts.indexOf(month) < 0) opts.push(month);
+  opts.sort();
+  const num = v => +String(v || '').replace(/[^\d]/g, '') || 0;
+  let dirty = false;
+
+  openModal(`<div class="mhead"><h2>Планы продаж</h2><button class="icon" data-close aria-label="Закрыть">✕</button></div>
+    <div class="form" id="pBody"><div class="loading">Загрузка…</div></div>`);
+  let d;
+  try { d = await call('plans', { month }); } catch (e) { closeModal(); toast(e.message, true); return; }
+
+  $('#pBody').innerHTML = `
+    <div class="toolbar" style="margin:0">
+      <label>Месяц<select id="pMonth">${opts.map(k => opt(k, d.month, monthLabel(k))).join('')}</select></label>
+      <span class="sp"></span><button class="btn sm" id="pPrev" type="button">Как в прошлом месяце</button>
+    </div>
+    ${d.rows.length ? `<div class="tbl-wrap"><table class="plan-tbl"><thead><tr><th>Сотрудник</th><th class="num">Продажи, шт</th><th class="num">Объём сделок, ₽</th></tr></thead>
+      <tbody>${d.rows.map((x, i) => `<tr data-i="${i}">
+        <td><b>${esc(shortFio(x.fio))}</b>${x.type ? ` <span class="muted">${esc(x.type)}</span>` : ''}</td>
+        <td><input name="deals" inputmode="numeric" autocomplete="off" value="${x.deals ? esc(money(x.deals)) : ''}" aria-label="Продажи, шт"></td>
+        <td><input name="volume" inputmode="numeric" autocomplete="off" value="${x.volume ? esc(money(x.volume)) : ''}" aria-label="Объём сделок, ₽"></td></tr>`).join('')}</tbody>
+      <tfoot><tr class="total"><td>Итого</td><td class="num" id="pTD"></td><td class="num" id="pTV"></td></tr></tfoot></table></div>`
+    : '<div class="empty">Нет активных сотрудников с ролью «Сотрудник»</div>'}
+    <small class="muted">Пустое поле — план не задан. В отчёте за неделю или день план берётся пропорционально числу дней месяца.</small>
+    <div><button class="btn primary" id="pSave"${d.rows.length ? '' : ' disabled'}>Сохранить</button></div>`;
+
+  const rows = () => $$('tr[data-i]', $('#pBody'));
+  const totals = () => {
+    let td = 0, tv = 0;
+    rows().forEach(tr => { td += num($('[name=deals]', tr).value); tv += num($('[name=volume]', tr).value); });
+    $('#pTD').textContent = money(td);
+    $('#pTV').textContent = money(tv);
+  };
+  if (d.rows.length) totals();
+  $('#pBody').addEventListener('input', e => { if (e.target.name) { dirty = true; totals(); } });
+  // Разряды в объёме расставляем после ввода, чтобы 1500000 читалось как 1 500 000.
+  $('#pBody').addEventListener('change', e => { if (e.target.name) e.target.value = num(e.target.value) ? money(num(e.target.value)) : ''; });
+  $('#pMonth').addEventListener('change', e => {
+    if (dirty && !confirm('Несохранённые планы за ' + monthLabel(d.month) + ' пропадут. Перейти к другому месяцу?')) { e.target.value = d.month; return; }
+    plansForm(e.target.value);
+  });
+  $('#pPrev').addEventListener('click', () => {
+    if (!d.rows.some(x => x.prevDeals || x.prevVolume)) { toast('В прошлом месяце планов нет'); return; }
+    rows().forEach(tr => {
+      const x = d.rows[+tr.dataset.i];
+      $('[name=deals]', tr).value = x.prevDeals ? money(x.prevDeals) : '';
+      $('[name=volume]', tr).value = x.prevVolume ? money(x.prevVolume) : '';
+    });
+    dirty = true;
+    totals();
+  });
+  $('#pSave').addEventListener('click', e => busy(e.target, 'Сохраняем…', async () => {
+    const list = rows().map(tr => ({ fio: d.rows[+tr.dataset.i].fio, deals: num($('[name=deals]', tr).value), volume: num($('[name=volume]', tr).value) }));
+    await call('savePlans', { month: d.month, rows: list });
+    dirty = false;
+    closeModal();
+    toast('Планы на ' + monthLabel(d.month).toLowerCase() + ' сохранены');
+    REP.key = '';
+    PLAN_V.month = d.month;
+    if (S.tab === 'reports' && REP.reload) {
+      if ($('#pvMonth')) $('#pvMonth').value = d.month;
+      REP.reload();
+    }
+  }));
+}
+
+function managerDetail(m, st) {
+  const types = st.types.concat(m.byType['Прочее'] ? ['Прочее'] : []);
+  const segs = st.segs.filter(x => m.bySeg[x.key]);
+  const cell = (t, k) => ((m.matrix[t] || {})[k]) || '';
+  return `<div class="cols">
+    <div><b>Вид активности × результат</b>
+      <div class="tbl-wrap" style="margin-top:6px"><table class="mini"><thead><tr><th></th>${segs.map(x => `<th class="num">${esc(x.label)}</th>`).join('')}<th class="num">Всего</th></tr></thead>
+        <tbody>${types.filter(t => m.byType[t]).map(t => `<tr><td>${esc(t)}</td>${segs.map(x => `<td class="num">${cell(t, x.key)}</td>`).join('')}<td class="num"><b>${m.byType[t]}</b></td></tr>`).join('')}</tbody></table></div>
+      <div class="muted" style="margin-top:6px">Клиентов: ${m.inns.size}</div></div>
+    <div><b>Сделки</b>${m.dealList.length ? `<ul class="hist">${m.dealList.map(a =>
+      `<li><b>${esc(a.short || a.inn)}</b> · ${esc(a.status)} · ${money(a.dealSum)} ₽<br><span class="muted">${ruD(a.date)} · ${esc(a.type)}</span></li>`).join('')}</ul>` : '<div class="muted" style="margin-top:6px">Нет</div>'}</div>
+  </div>`;
+}
+
+// Подсказка к сегментам графиков (наведение мыши).
+(function tooltip() {
+  const tip = $('#tip');
+  document.addEventListener('mouseover', e => {
+    const t = e.target.closest && e.target.closest('[data-tip]');
+    if (!t) { tip.className = ''; return; }
+    tip.textContent = t.dataset.tip;
+    tip.className = 'on';
+  });
+  document.addEventListener('mousemove', e => {
+    if (!tip.className) return;
+    tip.style.left = Math.min(e.clientX + 12, window.innerWidth - tip.offsetWidth - 8) + 'px';
+    tip.style.top = (e.clientY + 16) + 'px';
+  });
+})();
+
+let xlsxLoading = null;
+function loadXlsx() {
+  if (window.XLSX) return Promise.resolve();
+  if (!xlsxLoading) {
+    xlsxLoading = new Promise((resolve, reject) => {
+      const el = document.createElement('script');
+      el.src = BOOT.mode === 'gas' ? new URL('vendor/xlsx-0.20.3.full.min.js', BOOT.assetsUrl).href : './vendor/xlsx-0.20.3.full.min.js';
+      el.integrity = 'sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT';
+      el.crossOrigin = 'anonymous';
+      el.referrerPolicy = 'no-referrer';
+      el.onload = resolve;
+      el.onerror = () => { xlsxLoading = null; reject(new Error('Не удалось загрузить модуль Excel, проверьте интернет')); };
+      document.head.appendChild(el);
+    });
+  }
+  return xlsxLoading;
+}
+
+// Дата yyyy-mm-dd → порядковый номер дня Excel (без сдвигов часовых поясов).
+const xlDate = iso => iso ? (Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10)) - Date.UTC(1899, 11, 30)) / 864e5 : '';
+
+function reportWorkbook(r) {
+  const X = XLSX.utils, wb = X.book_new();
+  const sheet = (name, rows, o) => {
+    const ws = X.aoa_to_sheet(rows);
+    const fmt = (cols, z) => (cols || []).forEach(c => {
+      for (let i = 1; i < rows.length; i++) {
+        const cell = ws[X.encode_cell({ r: i, c })];
+        if (cell && cell.t === 'n') cell.z = z;
+      }
+    });
+    fmt(o.money, '#,##0');
+    fmt(o.dates, 'dd.mm.yyyy');
+    fmt(o.percent, '0%');
+    ws['!cols'] = o.widths.map(w => ({ wch: w }));
+    if (o.filter && rows.length > 1) {
+      ws['!autofilter'] = { ref: X.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length - 1, c: rows[0].length - 1 } }) };
+    }
+    X.book_append_sheet(wb, ws, name.slice(0, 31));
+  };
+  if (r.mpp) sheet('МПП на дату', [['Дата отчёта', 'С начала периода', 'МПП', 'Договоры за месяц', 'Получено согласие', 'Цель согласий', 'Клиент думает', 'Цель думает', 'Звонки за день', 'Цель звонков', 'Контакты за 30 дней']].concat(
+    r.mpp.rows.map(x => [r.mpp.asOf, r.mpp.from, reportName(x.fio), x.contracts, x.agreed, 5, x.thinking, 20, x.calls, 20, x.last30])
+  ), { widths: [16,18,36,24,24,18,22,18,22,18,26], filter: true });
+  const confirmations = r.confirmedSales || [];
+  sheet('Сверка продаж по ИНН', [['Месяц', 'Сотрудник', 'ИНН', 'Клиент', 'Продажи менеджера', 'Подтверждённые продажи', 'Пометка', 'Продукты', 'Исходных строк', 'Данные на дату']].concat(
+    confirmations.flatMap(c => c.details.map(x => [x.month, reportName(x.fio), x.inn, x.short, x.manager, x.confirmed, x.confirmed ? 'Подтверждено' : 'Нет подтверждения в снимке', x.products.join('; '), x.sourceRows, x.asOf]))
+  ), { widths: [14, 36, 16, 30, 22, 26, 32, 36, 18, 18], filter: true });
+  sheet('Подтверждения по месяцам', [['Месяц', 'Данные на дату', 'Продажи менеджеров, ИНН', 'Подтверждено, ИНН', 'Прогноз, ИНН', 'Рабочих дней прошло', 'Рабочих дней всего', 'Строк источника']].concat(
+    confirmations.map(c => [c.month, c.asOf, c.manager, c.confirmed, c.forecast == null ? 'Без прогноза' : c.forecast, c.workdays.passed == null ? '' : c.workdays.passed, c.workdays.total || '', c.sourceRows]),
+    [['Подтверждения включаются только за месяцы, целиком попавшие в период: дат отдельных продаж в источнике нет.']]
+  ), { widths: [55, 18, 28, 24, 22, 24, 24, 20] });
+  const s = r.summary;
+  const mgr = managerStats(r, '');
+  sheet('Сводка', [
+    ['Показатель', 'Значение'],
+    ['Отчёт', r.label],
+    ['Сформирован', r.generatedAt + ', ' + reportName(r.author)],
+    ['Активностей', s.acts]
+  ].concat(r.types.map(t => ['   ' + t, s.byType[t] || 0]), [
+    ['Клиентов в работе за период', s.clients],
+    ['Новых клиентов', s.newClients],
+    ['Сделок (клиентов)', s.deals],
+    ['Сумма сделок, ₽', s.dealSum],
+    ['Отказы и блокировки', s.lost],
+    ['План сделок на период', mgr.list.reduce((x, m) => x + (m.plan ? m.plan.deals : 0), 0) || '—'],
+    ['План объёма сделок на период, ₽', mgr.list.reduce((x, m) => x + (m.plan ? m.plan.volume : 0), 0) || '—'],
+    ['Открытая воронка, клиентов', r.pipeline.count],
+    ['Следующие шаги в ближайшие 30 дней', r.pipeline.next30],
+    ['Сотрудники без активностей', r.idle.map(reportName).join(', ') || '—']
+  ]), { money: [1], widths: [40, 60] });
+
+  // Менеджеры: план и факт по сделкам, активности по видам и статусам.
+  const mTypes = mgr.types.concat(mgr.list.some(m => m.byType['Прочее']) ? ['Прочее'] : []);
+  const pct = (f, p) => p ? Math.round(f / p * 100) / 100 : '';
+  const mHead = ['ФИО', 'Тип сотрудника', 'Сделок', 'План сделок', '% плана', 'Объём сделок, ₽', 'План объёма, ₽', '% плана',
+    'Активностей'].concat(mTypes, mgr.statusCols, ['Просрочено шагов']);
+  const mRows = mgr.list.filter(m => m.acts || m.plan).map(m => [reportName(m.fio), m.type,
+    m.dealList.length, m.plan ? m.plan.deals : '', pct(m.dealList.length, m.plan && m.plan.deals),
+    m.dealSum, m.plan ? m.plan.volume : '', pct(m.dealSum, m.plan && m.plan.volume), m.acts]
+    .concat(mTypes.map(t => m.byType[t] || 0), mgr.statusCols.map(x => m.byStatus[x] || 0), [m.overdue]));
+  sheet('Менеджеры', [mHead].concat(mRows), { money: [5, 6], percent: [4, 7], widths: [32, 10].concat(mHead.slice(2).map(() => 12)), filter: true });
+
+  const head = ['Разрез', 'Активностей'].concat(r.types,
+    ['Клиентов', 'Новых клиентов', 'Сделок', 'Сумма сделок', 'Отказы и блокировки']);
+  const groupRow = (x, label) => [label, x.acts].concat(r.types.map(t => x.byType[t] || 0),
+    [x.clients, x.newClients, x.deals, x.dealSum, x.lost]);
+  r.groupsMeta.forEach(g => {
+    const rows = r.groups[g.key].map(x => groupRow(x, g.key === 'day' ? ruD(x.key) : (g.key === 'fio' || g.key === 'no') ? reportName(x.key) : x.key));
+    rows.push(groupRow(s, 'Итого'));
+    sheet(g.title, [head].concat(rows), { money: [head.length - 2], widths: [34].concat(head.slice(1).map(() => 13)) });
+  });
+
+  sheet('Просроченные шаги', [['ФИО', 'Просроченных следующих активностей']].concat(r.overdue.map(o => [reportName(o.fio), o.count])),
+    { widths: [36, 22] });
+  sheet('Активности', [['Дата', 'ФИО', 'ФИО НО', 'Тип сотрудника', 'ИНН', 'Клиент', 'Приоритет', 'Канал', 'Вид', 'Статус',
+    'Пиратка', 'Объём оборота, ₽/месяц', 'След. активность', 'Комментарий']].concat(r.details.map(a => [
+    xlDate(a.date), reportName(a.fio), reportName(a.no), a.empType, a.inn, a.short, a.priority || '', a.channel, a.type, a.status,
+    a.pirate || 'нет', a.dealSum || '', xlDate(a.next), a.comment])),
+    { dates: [0, 12], money: [11], widths: [11, 30, 30, 10, 13, 30, 12, 18, 11, 20, 14, 14, 12, 60], filter: true });
+  sheet('Клиенты', [['ФИО', 'ФИО НО', 'ИНН', 'Клиент', 'Приоритет', 'Канал', 'Текущий статус', 'Тип статуса', 'Пиратка',
+    'Объём оборота, ₽/месяц', 'Последняя активность', 'Следующая активность', 'Активностей за период', 'Последний комментарий']]
+    .concat(r.clients.map(c => [reportName(c.fio), reportName(c.no), c.inn, c.short, c.priority || '', c.channel, c.status, c.kind, c.pirate || 'нет',
+      c.dealSum || '', xlDate(c.date), xlDate(c.next), c.count, c.comment])),
+    { money: [9], dates: [10, 11], widths: [30, 30, 13, 30, 12, 18, 20, 10, 14, 14, 12, 12, 10, 60], filter: true });
+  return wb;
+}
+
+/* ---------- Админ ---------- */
+VIEWS.admin = async () => {
+  const [users, info] = await Promise.all([call('users'), call('adminInfo')]);
+  S.users = users;
+  const d = S.dicts;
+  $('#view').innerHTML = `
+    <h3>Пользователи <span class="badge">${users.length}</span><span style="flex:1"></span><button class="btn primary sm" id="uAdd">+ Пользователь</button></h3>
+    <div class="card tbl-wrap"><table class="resp"><thead><tr><th>ФИО</th><th>Тип</th><th>ФИО НО</th><th>Роль</th><th>Выгрузка отчётов</th><th>Доп. доступ</th><th>Активен</th><th>Ссылка</th></tr></thead>
+      <tbody>${users.map(u => `<tr class="click" data-uid="${esc(u.id)}">
+        <td data-l="ФИО"><b>${esc(shortFio(u.fio))}</b></td><td data-l="Тип">${esc(u.type || '—')}</td><td data-l="НО">${esc(shortFio(u.no) || '—')}</td>
+        <td data-l="Роль">${esc(u.role)}</td><td data-l="Выгрузка отчётов">${u.reports || u.role === 'Администратор' ? 'да' : 'нет'}</td>
+        <td data-l="Доп. доступ">${esc(u.extra.map(shortFio).join(', ') || '—')}</td><td data-l="Активен">${u.active ? 'да' : '<b>нет</b>'}</td>
+        <td data-l="Ссылка"><button class="btn sm" data-copy="${esc(u.id)}">Скопировать</button></td></tr>`).join('')}</tbody></table></div>
+
+    <h3>Признак «Пиратка»</h3>
+    <div class="card pad">
+      <div>${esc(info.import.msg)}</div>
+      <div class="muted" style="margin:4px 0 10px">${info.import.at ? 'Последний запуск: ' + new Date(info.import.at).toLocaleString('ru-RU') : ''} · автоматически каждый день в 6:00</div>
+      <button class="btn primary" id="impBtn">Обновить признак «Пиратка»</button>
+      <a class="btn ghost" href="${esc(info.sheetUrl)}" target="_blank" rel="noopener">Открыть таблицу</a>
+    </div>
+
+    <h3>Подтверждённые продажи по ИНН</h3>
+    <div class="card pad">
+      <p>Загрузите полный снимок выбранного месяца из Excel / CSV / TSV / TXT или вставьте таблицу с заголовками. Повторная загрузка обновляет месяц, история снимков сохраняется.</p>
+      <button class="btn primary" id="confirmedImportBtn">Загрузить подтверждённые продажи</button>
+      <div class="muted" style="margin-top:10px">${Object.keys(info.confirmed || {}).sort().reverse().map(month => {
+        const b = info.confirmed[month];
+        return esc(monthLabel(month)) + ': ' + b.count + ' строк, ' + (b.asOf ? 'на ' + ruD(b.asOf) : 'дата снимка не указана');
+      }).join('<br>') || 'Подтверждения ещё не загружались'}</div>
+    </div>
+    <h3>Автоматический источник: регистрации MID</h3>
+    <div class="card pad">
+      <div>${esc(info.sales.msg)}</div>
+      <div class="muted" style="margin:4px 0 10px">${info.sales.at ? 'Последний запуск: ' + new Date(info.sales.at).toLocaleString('ru-RU') : ''} · автоматически каждый день в 7:00, лист «Продажи»</div>
+      <button class="btn primary" id="salesBtn">Загрузить продажи сейчас</button>
+    </div>
+
+    <h3>Справочники</h3>
+    <div class="card pad">
+      <div class="cols">
+        <label class="fld"><span>Каналы поступления (по одному в строке)</span><textarea id="dCh" rows="6">${esc(d.channels.join('\n'))}</textarea></label>
+        <label class="fld"><span>Виды активности (по одному в строке)</span><textarea id="dTy" rows="6">${esc(d.types.join('\n'))}</textarea></label>
+        <div class="fld"><span>Статусы и их тип («Сделка» требует сумму). Без галочки статус остаётся в отчётах и старых записях, но выбрать его нельзя</span><div id="dSt">${d.statuses.map(stRow).join('')}</div>
+          <button class="btn sm" id="stAdd" type="button">+ статус</button></div>
+      </div>
+      <div style="margin-top:12px"><button class="btn primary" id="dSave">Сохранить справочники</button></div>
+    </div>
+
+    <h3>Настройки</h3>
+    <div class="card pad cols">
+      <label class="fld"><span>Адрес интерфейса для персональных ссылок</span>
+        <input id="sUrl" value="${esc(info.appUrl)}" placeholder="${esc(info.scriptUrl || 'https://…')}">
+        <small>Пусто — ссылки ведут на веб-приложение Apps Script${info.scriptUrl ? ' (' + esc(info.scriptUrl) + ')' : ''}. Для GitHub Pages укажите адрес страницы.</small></label>
+      <div class="fld"><span>Поиск названий компаний</span><small>Кнопка «Найти название по ИНН» в форме активности использует egrul.org без ключа. Фоновая отправка ИНН и ежедневные запросы выключены.</small></div>
+      <div><button class="btn" id="sSave">Сохранить настройки</button></div>
+    </div>`;
+
+  $$('[data-uid]').forEach(tr => tr.addEventListener('click', e => {
+    if (e.target.closest('[data-copy]')) return;
+    userForm(users.find(u => u.id === tr.dataset.uid));
+  }));
+  $$('[data-copy]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); busy(b, 'Получаем…', async () => copyText((await call('userLink', { id: b.dataset.copy })).link)); }));
+  $('#uAdd').addEventListener('click', () => userForm(null));
+  $('#impBtn').addEventListener('click', e => busy(e.target, 'Загружаем…', async () => {
+    toast(await call('runImport'));
+    refresh();
+  }));
+  $('#confirmedImportBtn').addEventListener('click', confirmedImportForm);
+  $('#salesBtn').addEventListener('click', e => busy(e.target, 'Загружаем…', async () => {
+    toast(await call('runSalesImport'));
+    refresh();
+  }));
+  $('#stAdd').addEventListener('click', () => $('#dSt').insertAdjacentHTML('beforeend', stRow({ name: '', kind: 'open', active: true })));
+  $('#dSt').addEventListener('click', e => { if (e.target.dataset.rm != null) e.target.closest('.st-row').remove(); });
+  $('#dSave').addEventListener('click', e => busy(e.target, 'Сохраняем…', async () => {
+    const lines = id => $(id).value.split('\n').map(s => s.trim()).filter(Boolean);
+    const statuses = $$('.st-row', $('#dSt')).map(r => ({ name: $('input', r).value.trim(), kind: $('select', r).value, active: $('[data-active]', r).checked })).filter(s => s.name);
+    S.dicts = await call('saveDicts', { channels: lines('#dCh'), types: lines('#dTy'), statuses });
+    S.kinds = Object.fromEntries(S.dicts.statuses.map(s => [s.name, s.kind]));
+    toast('Справочники сохранены');
+  }));
+  $('#sSave').addEventListener('click', e => busy(e.target, 'Сохраняем…', async () => {
+    const args = { appUrl: $('#sUrl').value.trim() };
+    await call('saveSettings', args);
+    toast('Настройки сохранены, ссылки обновлены');
+    refresh();
+  }));
+};
+
+function renderConfirmedSales(c) {
+  const fullScope = S.me.seeAll || S.me.canReport;
+  const num = n => n == null ? '—' : fmtPlanN(n);
+  const kpi = (n, label) => `<div class="card kpi"><b>${num(n)}</b><span>${label}</span></div>`;
+  const note = !c.loaded ? 'Подтверждения за этот месяц ещё не загружены.'
+    : !c.asOf ? 'Дата снимка не указана — без прогноза.'
+    : !c.workdays.known ? 'Для этого года рабочий календарь не настроен — без прогноза.'
+    : `Данные на ${ruD(c.asOf)}. Прошло ${c.workdays.passed} из ${c.workdays.total} рабочих дней (пятидневка РФ).`;
+  $('#confirmedBox').innerHTML = `
+    <div class="kpis">${kpi(c.manager, 'Продажи менеджеров, ИНН')}${kpi(c.confirmed, 'Подтверждённые продажи, ИНН')}${kpi(c.forecast, 'Прогноз подтверждений на конец месяца')}</div>
+    <div class="muted note-line">${esc(note)} ${c.loaded ? `${fullScope ? 'В источнике' : 'В доступной части источника'} ${c.sourceRows} строк.` : ''}<br>
+      По менеджеру — один ИНН за месяц: повторные статусы и несколько продуктов не увеличивают счётчик. Итог по доступным сотрудникам — уникальные ИНН, поэтому при общих клиентах он может отличаться от суммы строк. Сверка показывает наличие продажи у того же менеджера в том же месяце; даты продажи в выгрузке нет.</div>
+    ${c.managers.length ? `<div class="card tbl-wrap"><table class="resp"><thead><tr><th>Менеджер</th><th class="num">Продажи менеджера</th><th class="num">Подтверждено</th><th class="num">Прогноз</th></tr></thead><tbody>
+      ${c.managers.map(m => `<tr><td data-l="Менеджер">${esc(reportName(m.fio))}</td><td data-l="Продажи менеджера" class="num">${m.manager}</td><td data-l="Подтверждено" class="num">${c.loaded ? m.confirmed : '—'}</td><td data-l="Прогноз" class="num">${num(m.forecast)}</td></tr>`).join('')}
+      <tr class="total"><td data-l="Менеджер">${fullScope ? 'Итого по команде' : 'Итого по доступным сотрудникам'} (уникальные ИНН)</td><td data-l="Продажи менеджера" class="num">${num(c.manager)}</td><td data-l="Подтверждено" class="num">${num(c.confirmed)}</td><td data-l="Прогноз" class="num">${num(c.forecast)}</td></tr>
+    </tbody></table></div>` : ''}
+    <details class="card pad" style="margin:12px 0"><summary>Сверка по ИНН (${c.details.length})</summary>
+      <label class="fld" style="margin:12px 0"><span>Найти ИНН, клиента или менеджера</span><input id="confirmedSearch" type="search" placeholder="ИНН или ФИО"></label>
+      <div class="tbl-wrap"><table class="resp"><thead><tr><th>ИНН / клиент</th><th>Менеджер</th><th class="num">Продажа менеджера</th><th class="num">Подтверждено</th><th>Пометка / продукты</th></tr></thead><tbody id="confirmedRows"></tbody></table></div>
+      <small class="muted">Детализация доступна в пределах ваших прав. Выгрузка в Excel ниже включает подтверждения за целые месяцы выбранного периода.</small>
+    </details>`;
+  const renderRows = () => {
+    const q = $('#confirmedSearch').value.trim().toLowerCase();
+    const rows = c.details.filter(r => [r.inn, r.short, reportName(r.fio)].join(' ').toLowerCase().includes(q));
+    $('#confirmedRows').innerHTML = rows.map(r => `<tr><td data-l="ИНН / клиент">${esc(r.inn)}<br><small>${esc(r.short)}</small></td><td data-l="Менеджер">${esc(reportName(r.fio))}</td><td data-l="Продажа менеджера" class="num">${r.manager}</td><td data-l="Подтверждено" class="num">${c.loaded ? r.confirmed : '—'}</td><td data-l="Пометка / продукты">${r.confirmed ? '<span class="chip k-deal">Подтверждено</span>' : c.loaded ? 'Нет подтверждения в снимке' : 'Нет данных'}<br><small>${esc(r.products.join('; '))}</small></td></tr>`).join('') || '<tr><td colspan="5">Нет данных</td></tr>';
+  };
+  $('#confirmedSearch').addEventListener('input', renderRows);
+  renderRows();
+}
+
+function confirmedImportForm() {
+  let preview = null, matrix = null, fileVersion = 0, revision = 0;
+  openModal(`<div class="mhead"><h2>Загрузка подтверждённых продаж</h2><button class="icon" data-close aria-label="Закрыть">✕</button></div>
+    <div class="form">
+      <div class="cols"><label class="fld"><span>Месяц продаж</span><input type="month" id="csMonth" value="${PLAN_V.month}"></label>
+        <label class="fld"><span>Данные на дату (включительно)</span><input type="date" id="csDate"><small>Необязательно. Без даты — без прогноза. Дата должна быть внутри месяца продаж.</small></label></div>
+      <label class="fld"><span>Файл Excel, CSV, TSV или TXT (до 5 МБ)</span><input type="file" id="csFile" accept=".xlsx,.xls,.csv,.tsv,.txt"></label>
+      <label class="fld hidden" id="csSheetLabel"><span>Лист Excel</span><select id="csSheet"></select></label>
+      <label class="fld"><span>Или вставьте таблицу с заголовками</span><textarea id="csText" rows="7" placeholder="Сотрудник&#9;ИНН&#9;Продукты"></textarea></label>
+      <small class="muted">Обязательные столбцы: «Сотрудник», «ИНН». Один файл — полный снимок одного месяца для всей команды. Новый снимок заменяет предыдущий в отчётах, остальные месяцы и активности сохраняются.</small>
+      <div id="csPreview" style="white-space:pre-wrap" aria-live="polite"></div>
+      <div><button class="btn" id="csCheck">Проверить загрузку</button> <button class="btn primary" id="csSave" disabled>Загрузить снимок месяца</button></div>
+    </div>`);
+  const invalidate = () => { revision++; preview = null; $('#csSave').disabled = true; $('#csPreview').textContent = ''; };
+  const args = () => ({ month: $('#csMonth').value, asOf: $('#csDate').value, ...(matrix ? { rows: matrix } : { text: $('#csText').value }) });
+  ['#csMonth', '#csDate'].forEach(id => $(id).addEventListener('input', invalidate));
+  $('#csText').addEventListener('input', () => {
+    fileVersion++; matrix = null; $('#csCheck').disabled = false; $('#csFile').value = ''; $('#csSheetLabel').classList.add('hidden'); invalidate();
+  });
+  $('#csFile').addEventListener('change', async () => {
+    const version = ++fileVersion, file = $('#csFile').files[0];
+    invalidate(); matrix = null; $('#csText').value = ''; $('#csSheetLabel').classList.add('hidden');
+    if (!file) return;
+    $('#csCheck').disabled = true;
+    try {
+      if (file.size > 5 * 1024 * 1024) throw new Error('Максимальный размер файла — 5 МБ');
+      if (!/\.(xlsx|xls|csv|tsv|txt)$/i.test(file.name)) throw new Error('Выберите Excel, CSV, TSV или TXT');
+      const buffer = await file.arrayBuffer();
+      if (version !== fileVersion) return;
+      if (/\.(csv|tsv|txt)$/i.test(file.name)) {
+        let text = new TextDecoder('utf-8').decode(buffer);
+        if (text.includes('\uFFFD')) text = new TextDecoder('windows-1251').decode(buffer);
+        $('#csText').value = text;
+      } else {
+        await loadXlsx();
+        if (version !== fileVersion) return;
+        const wb = XLSX.read(buffer, { type: 'array' });
+        $('#csSheet').innerHTML = wb.SheetNames.map(n => opt(n, wb.SheetNames[0])).join('');
+        $('#csSheetLabel').classList.remove('hidden');
+        const selectSheet = () => { matrix = XLSX.utils.sheet_to_json(wb.Sheets[$('#csSheet').value], { header: 1, raw: false, defval: '' }); invalidate(); };
+        $('#csSheet').onchange = selectSheet; selectSheet();
+      }
+    } catch (e) { $('#csPreview').textContent = e.message; }
+    finally { if (version === fileVersion && $('#csCheck')) $('#csCheck').disabled = false; }
+  });
+  $('#csCheck').addEventListener('click', e => busy(e.target, 'Проверяем…', async () => {
+    const payload = args();
+    invalidate(); const checkRev = revision;
+    try {
+      const p = await call('previewConfirmedSales', payload);
+      if (revision !== checkRev || !$('#csPreview')) return;
+      preview = { ...p, payload };
+      $('#csPreview').innerHTML = `<b>${esc(monthLabel(p.month))}</b> · ${p.asOf ? 'на ' + ruD(p.asOf) : 'без даты и прогноза'}<br>
+        Строк: ${p.rows}. Уникальных ИНН: ${p.clients}. Менеджеров: ${p.managers.length}. Убрано точных дублей: ${p.duplicates}.<br>
+        ${p.unknown && p.unknown.length ? '<b>ФИО без учётной записи (будут сохранены как в файле): ' + esc(p.unknown.map(reportName).join('; ')) + '</b><br>' : ''}
+        ${p.unchanged ? 'Этот снимок уже загружен, повторной записи не будет.' : p.previous ? '<b>Будет обновлён весь снимок месяца: ранее ' + p.previous.count + ' строк.</b>' : 'Будет добавлен первый снимок месяца.'}
+        <div style="margin-top:8px">${p.managers.map(m => esc(reportName(m.fio)) + ': ' + m.confirmed).join('<br>')}</div>`;
+      $('#csSave').disabled = false;
+    } catch (error) { if ($('#csPreview')) $('#csPreview').textContent = error.message; throw error; }
+  }));
+  $('#csSave').addEventListener('click', e => busy(e.target, 'Загружаем…', async () => {
+    if (!preview) throw new Error('Сначала проверьте загрузку');
+    const result = await call('importConfirmedSales', { ...preview.payload, expectedBatch: preview.expectedBatch });
+    REP.data = null; REP.key = ''; PLAN_V.month = result.month;
+    closeModal(); toast(result.unchanged ? 'Этот снимок уже загружен' : `Загружено ${result.count} строк, ${result.clients} ИНН`);
+    refresh();
+  }));
+}
+
+function stRow(s) {
+  const kinds = [['open', 'Открыт'], ['deal', 'Сделка'], ['lost', 'Закрыт']];
+  return `<div class="st-row"><input value="${esc(s.name)}" placeholder="Название статуса">
+    <select>${kinds.map(k => opt(k[0], s.kind, k[1])).join('')}</select>
+    <label class="chk" title="Доступен для выбора"><input type="checkbox" data-active${s.active !== false ? ' checked' : ''}>доступен</label>
+    <button class="icon" type="button" data-rm title="Удалить">✕</button></div>`;
+}
+
+async function userForm(u) {
+  if (u) {
+    try { u = { ...u, ...(await call('userLink', { id: u.id })) }; }
+    catch (e) { toast(e.message, true); return; }
+  }
+  const isNew = !u;
+  u = u || { fio: '', type: '', no: '', role: 'Сотрудник', reports: false, extra: [], active: true, link: '' };
+  const heads = [...new Set(S.users.filter(x => x.role !== 'Сотрудник').map(x => x.fio).concat(u.no || []))];
+  const others = S.users.map(x => x.fio).filter(f => f !== u.fio);
+  openModal(`
+    <div class="mhead"><h2>${isNew ? 'Новый пользователь' : 'Пользователь'}</h2><button class="icon" data-close aria-label="Закрыть">✕</button></div>
+    <form class="form" id="uForm" novalidate>
+      ${isNew ? '<label class="fld"><span>ФИО нового сотрудника *</span><input name="fio" placeholder="Фамилия Имя Отчество"><small>После сохранения отображается только имя и три буквы фамилии.</small></label>' : `<div class="fld"><span>Сотрудник</span><div class="static">${esc(shortFio(u.fio))}</div></div>`}
+      <div class="grid2">
+        <label class="fld"><span>Тип сотрудника</span><select name="type"><option value="">—</option>${S.empTypes.map(t => opt(t, u.type)).join('')}</select></label>
+        <label class="fld"><span>Роль</span><select name="role">${S.roles.map(r => opt(r, u.role)).join('')}</select></label>
+      </div>
+      <label class="fld"><span>Начальник отдела</span><select name="no"><option value="">—</option>${heads.map(h => opt(h, u.no, shortFio(h))).join('')}</select></label>
+      <label class="chk"><input type="checkbox" name="reports"${u.reports ? ' checked' : ''}> Доступ к выгрузке отчётов в Excel (по всем данным)</label>
+      <label class="chk"><input type="checkbox" name="active"${u.active ? ' checked' : ''}> Доступ включён</label>
+      <div class="fld"><span>Дополнительно видит активности сотрудников</span>
+        <div class="checks">${others.map(f => `<label class="chk"><input type="checkbox" name="extra" value="${esc(f)}"${u.extra.indexOf(f) >= 0 ? ' checked' : ''}> ${esc(shortFio(f))}</label>`).join('') || '<span class="muted">Других пользователей нет</span>'}</div>
+        <small>Начальник отдела и администратор видят всё и без этого.</small></div>
+      ${u.link ? `<label class="fld"><span>Персональная ссылка</span><input id="uLink" readonly value="${esc(u.link)}"></label>` : ''}
+      <div class="ferr" id="uErr"></div>
+      <div class="mfoot">
+        ${!isNew ? '<button type="button" class="btn ghost danger" id="uRegen">Выдать новую ссылку</button>' : ''}
+        ${u.link ? '<button type="button" class="btn ghost" id="uCopy">Скопировать ссылку</button>' : ''}
+        <span class="sp"></span><button type="button" class="btn ghost" data-close>Отмена</button>
+        <button type="submit" class="btn primary" id="uSave">Сохранить</button>
+      </div>
+    </form>`);
+  const f = $('#uForm');
+  const copy = $('#uCopy');
+  if (copy) copy.addEventListener('click', () => copyText(u.link, $('#uLink')));
+  const regen = $('#uRegen');
+  if (regen) regen.addEventListener('click', () => {
+    if (!regen.dataset.sure) { regen.dataset.sure = '1'; regen.textContent = 'Старая ссылка перестанет работать. Точно?'; return; }
+    busy(regen, 'Выдаём…', async () => {
+      S.users = await call('regenToken', { id: u.id });
+      const fresh = S.users.find(x => x.id === u.id);
+      closeModal();
+      toast('Новая ссылка выдана');
+      await refresh();
+      userForm(fresh);
+    });
+  });
+  f.addEventListener('submit', async e => {
+    e.preventDefault();
+    const v = {
+      id: u.id || '', fio: isNew ? f.fio.value.trim() : u.fio, type: f.type.value, role: f.role.value, no: f.no.value.trim(),
+      reports: f.reports.checked, active: f.active.checked,
+      extra: $$('input[name=extra]:checked', f).map(i => i.value)
+    };
+    if (isNew && v.fio.split(/\s+/).length < 2) { $('#uErr').textContent = 'Укажите ФИО полностью'; return; }
+    busy($('#uSave'), 'Сохраняем…', async () => {
+      try {
+        const oldIds = new Set(S.users.map(x => x.id));
+        S.users = await call('saveUser', v);
+        closeModal(); toast('Пользователь сохранён');
+        await refresh();
+        const created = isNew && S.users.find(x => !oldIds.has(x.id));
+        if (created) userForm(created);
+      } catch (ex) { $('#uErr').textContent = ex.message; }
+    });
+  });
+}
+
+/* ---------- запуск ---------- */
+function fatal(msg) {
+  $('#tabs').innerHTML = '';
+  $('#view').innerHTML = `<div class="card fatal"><h2>Нет доступа</h2><p class="muted">${esc(msg)}</p></div>`;
+}
+
+(async function init() {
+  if (!TOKEN) return fatal('Откройте сервис по своей персональной ссылке. Ссылку выдаёт администратор.');
+  try {
+    // «План» — экран по умолчанию: запрашиваем его вместе с правами, а не после них.
+    let startTab = 'plan';
+    try { startTab = localStorage.getItem('akt_tab') || 'plan'; } catch (e) { /* ignore */ }
+    if (startTab === 'plan') {
+      S.prefetchPlan = call('plan', { fio: '' });
+      S.prefetchPlan.catch(() => {});
+    }
+    const d = await call('me');
+    S.me = d.user;
+    S.dicts = d.dicts;
+    S.kinds = Object.fromEntries(d.dicts.statuses.map(s => [s.name, s.kind]));
+    S.fios = d.fios;
+    S.roles = d.roles;
+    S.empTypes = d.empTypes;
+    S.minComment = d.minComment;
+    $('#who').innerHTML = `${esc(shortFio(S.me.fio))}<small>${esc(S.me.role)}${S.me.type ? ' · ' + esc(S.me.type) : ''}</small>`;
+    $('#foot').textContent = '';
+    const allowed = TABS.filter(t => t[2](S.me)).map(t => t[0]);
+    go(allowed.indexOf(startTab) >= 0 ? startTab : 'plan');
+  } catch (e) {
+    fatal(e.message);
+  }
+})();
+</script>
+</body>
+</html>
