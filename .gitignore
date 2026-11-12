@@ -1,0 +1,19 @@
+# Publish only the runtime bundle and deployment configuration.
+/*
+!/.gitignore
+!/.github/
+/.github/*
+!/.github/workflows/
+/.github/workflows/*
+!/.github/workflows/deploy.yml
+!/release/
+/release/*
+!/release/Server.gs
+!/release/Index.html
+!/release/appsscript.json
+!/web/
+/web/*
+!/web/vendor/
+/web/vendor/*
+!/web/vendor/xlsx-0.20.3.full.min.js
+!/web/vendor/SheetJS-LICENSE.txt

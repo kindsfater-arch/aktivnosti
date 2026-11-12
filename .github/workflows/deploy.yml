@@ -1,0 +1,170 @@
+name: Deploy
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+      - name: Validate release
+        run: |
+          python3 - <<'PY'
+          import pathlib, subprocess
+          expected = {'.gitignore', '.github/workflows/deploy.yml', 'release/Server.gs', 'release/Index.html', 'release/appsscript.json', 'web/vendor/xlsx-0.20.3.full.min.js', 'web/vendor/SheetJS-LICENSE.txt'}
+          assert set(subprocess.check_output(['git','ls-files'], text=True).splitlines()) == expected, 'Unexpected files in release'
+          PY
+          node - <<'JS'
+          const fs=require('fs'),vm=require('vm');
+          new vm.Script(fs.readFileSync('release/Server.gs','utf8'));
+          const html=fs.readFileSync('release/Index.html','utf8');
+          for(const m of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)) new vm.Script(m[1].replace(/\/\*BOOT\*\/[\s\S]*?\/\*END\*\//,'{}'));
+          JS
+      - name: Install deployment tool before loading secrets
+        run: npm install -g @google/clasp@2.4.2 --quiet
+      - name: Deploy server
+        env:
+          CLASPRC: ${{ secrets.CLASPRC_JSON }}
+          SERVICE_CONFIG: ${{ secrets.SERVICE_CONFIG_JSON }}
+          SCRIPT_ID: ${{ vars.SCRIPT_ID }}
+          DEPLOYMENT_ID: ${{ vars.DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLASPRC" && test -n "$SCRIPT_ID" && test -n "$DEPLOYMENT_ID"
+          python3 - <<'PY'
+          import json, os, pathlib, re
+          cfg = json.loads(os.environ['SERVICE_CONFIG'])
+          file = pathlib.Path('release/Server.gs'); code = file.read_text()
+          for key in ['SPREADSHEET_ID','DATA_FOLDER_ID','SALES_SHEET_ID','PUBLIC_URL','WEB_APP_URL']:
+              value = cfg.get(key)
+              assert isinstance(value, str) and value, 'Missing deployment setting'
+              code, count = re.subn(r'  '+key+r": ''", lambda m: '  '+key+': '+json.dumps(value), code, count=1)
+              assert count == 1, 'Invalid configuration placeholder'
+          file.write_text(code)
+          pathlib.Path('.clasp.json').write_text(json.dumps({'scriptId':os.environ['SCRIPT_ID'],'rootDir':'release'}))
+          auth = pathlib.Path.home()/'.clasprc.json'; auth.touch(mode=0o600); auth.write_text(os.environ['CLASPRC'])
+          PY
+          clasp push -f
+          clasp deploy -i "$DEPLOYMENT_ID" -d "Current release"
+      - if: always()
+        run: rm -f ~/.clasprc.json .clasp.json
+
+  pages:
+    needs: server
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.publish.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Build interface
+        env:
+          API_URL: ${{ vars.API_URL }}
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, re, shutil
+          api = os.environ['API_URL']; assert api.startswith('https://'), 'Missing API URL'
+          out = pathlib.Path('dist'); (out/'vendor').mkdir(parents=True, exist_ok=True)
+          for name in ['xlsx-0.20.3.full.min.js','SheetJS-LICENSE.txt']:
+              shutil.copyfile(pathlib.Path('web/vendor')/name, out/'vendor'/name)
+          html, count = re.subn(r'/\*BOOT\*/.*?/\*END\*/', lambda m: json.dumps({'mode':'web','apiUrl':api}), pathlib.Path('release/Index.html').read_text(), count=1)
+          assert count == 1, 'Missing boot marker'
+          (out/'index.html').write_text(html)
+          PY
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        with:
+          path: dist
+          retention-days: 1
+      - id: publish
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+      - name: Check published interface
+        env:
+          PAGE_URL: ${{ steps.publish.outputs.page_url }}
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, time, urllib.request
+          expected = pathlib.Path('dist/index.html').read_bytes()
+          for attempt in range(12):
+              try:
+                  with urllib.request.urlopen(os.environ['PAGE_URL']+'?check='+str(time.time_ns()), timeout=20) as response:
+                      if response.read() == expected: break
+              except OSError: pass
+              time.sleep(5)
+          else: raise SystemExit('Published interface verification failed; history retained')
+          PY
+
+  cleanup:
+    needs: pages
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+      deployments: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Keep one deployed commit and remove old build records
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess, urllib.request
+          def git(*args): return subprocess.check_output(['git',*args], text=True).strip()
+          sha = os.environ['GITHUB_SHA']
+          if git('ls-remote','origin','refs/heads/main').split()[0] != sha:
+              print('A newer revision exists; cleanup deferred to its deployment.')
+              raise SystemExit(0)
+          git('config','user.name','Service deployment')
+          git('config','user.email','deployment@users.noreply.github.com')
+          tree = git('rev-parse','HEAD^{tree}')
+          clean = git('commit-tree',tree,'-m','Current release')
+          git('push','origin',clean+':refs/heads/main','--force-with-lease=refs/heads/main:'+sha)
+          base = 'https://api.github.com/repos/'+os.environ['GITHUB_REPOSITORY']
+          def api(path, method='GET', body=None):
+              data = None if body is None else json.dumps(body).encode()
+              request = urllib.request.Request(base+path, data=data, method=method, headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'})
+              with urllib.request.urlopen(request,timeout=30) as response:
+                  raw=response.read(); return json.loads(raw) if raw else None
+          def items(path, key=None):
+              result=[]
+              for page in range(1,100):
+                  payload=api(path+('?page=' if '?' not in path else '&page=')+str(page)+'&per_page=100')
+                  rows=payload[key] if key else payload
+                  result.extend(rows)
+                  if len(rows)<100: return result
+              raise RuntimeError('Pagination limit reached')
+          # Only this repository and completed earlier runs; never cancel another deployment.
+          for run in items('/actions/runs','workflow_runs'):
+              if str(run['id']) != os.environ['GITHUB_RUN_ID'] and run['status']=='completed':
+                  api('/actions/runs/'+str(run['id']),'DELETE')
+          for artifact in items('/actions/artifacts','artifacts'):
+              if str((artifact.get('workflow_run') or {}).get('id')) == os.environ['GITHUB_RUN_ID']:
+                  api('/actions/artifacts/'+str(artifact['id']),'DELETE')
+          for cache in items('/actions/caches','actions_caches'):
+              api('/actions/caches/'+str(cache['id']),'DELETE')
+          for deployment in items('/deployments'):
+              if deployment['sha'] != sha:
+                  path='/deployments/'+str(deployment['id'])
+                  api(path+'/statuses','POST',{'state':'inactive'})
+                  api(path,'DELETE')
+          print('One release commit retained; previous build records removed.')
+          PY
